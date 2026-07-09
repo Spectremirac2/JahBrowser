@@ -1,0 +1,25 @@
+# Copyright 2026 The JahBrowser Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("jah_home") {
+  sources = [ "jah_home_ui.cc" ]
+  public = [ "jah_home_ui.h" ]
+
+  # The self-contained page is #include'd as a raw string literal by
+  # jah_home_ui.cc. Listed here so GN tracks it as a build input.
+  inputs = [ "resources/jah_home_page.inc" ]
+
+  public_deps = [
+    "//chrome/common",
+    "//content/public/browser",
+  ]
+
+  deps = [
+    "//base",
+    "//content/public/common",
+    "//services/network/public/mojom",
+    "//ui/base",
+    "//ui/webui",
+  ]
+}

@@ -1,0 +1,276 @@
+/* ============================================================
+   JahBrowser — "Jah" Temasi Design Token Stylesheet (dark-first)
+   Kaynak: research/12-entegrasyon-derinlesme/jah-tema-tokenlari.md
+           research/01-jahrein/jahrein-marka.md
+   Kurallar:
+   - Tum UI bilesenleri YALNIZCA --jah-* tokenlarini kullanir (hardcoded hex yok).
+   - JahMod temalari bu :root katmanini override eder.
+   - --jah-live (yesil) = izlenen kanal canli; --jah-onair (kirmizi) = SEN yayindasin.
+     Iki token asla ayni degere set edilemez.
+   - --jah-accent (#53FC18) metin rengi olarak KULLANILMAZ; yalnizca rozet zemini,
+     aktif cizgi, ikon stroke ve glow.
+   - Dis font/asset yok: sistem font yigini.
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* ---------- Renk: zemin ve yuzeyler (Kick zemin ailesi) ---------- */
+  --jah-bg: #0B0E0F;                       /* ana pencere/sekme arka plani */
+  --jah-bg-deep: #070909;                  /* tam ekran video arkasi, splash */
+  --jah-surface: #191B1F;                  /* panel, sidebar, kart, adres cubugu */
+  --jah-surface-2: #24272C;                /* hover kartlari, dropdown, dialog (raised) */
+  --jah-surface-overlay: #2C3036;          /* modal/menu en ust katman */
+  --jah-border: #33383F;                   /* 1px ayirici cizgiler */
+  --jah-border-strong: #474F54;            /* aktif alan kenarligi, focus disi input */
+  --jah-scrim: rgba(7, 9, 9, 0.72);        /* modal arkasi karartma */
+
+  /* ---------- Renk: metin ---------- */
+  --jah-text: #F2F2F0;                     /* birincil metin ("Salut Beyazi") */
+  --jah-text-dim: #9BA1A6;                 /* ikincil metin, etiketler ("Sis Grisi") */
+  --jah-text-muted: #6B7178;               /* devre disi / placeholder */
+  --jah-text-on-accent: #0B0E0F;           /* neon yesil zemin ustu metin */
+  --jah-text-on-danger: #FFFFFF;           /* kirmizi zemin ustu metin */
+  --jah-link: #3B9EFF;                     /* linkler (hover'da yesil DEGIL) */
+
+  /* ---------- Renk: aksan ---------- */
+  --jah-accent: #53FC18;                   /* birincil aksan (Kick Harlequin) */
+  --jah-accent-hover: #71FD44;             /* aksan hover */
+  --jah-accent-pressed: #3FD30E;           /* aksan basili */
+  --jah-accent-subtle: rgba(83, 252, 24, 0.12);   /* secili satir / aktif menu yikamasi */
+  --jah-accent-glow: 0 0 12px rgba(83, 252, 24, 0.45); /* "Jahrein yayinda" glow */
+  --jah-gold: #C9A227;                     /* Balta Altini: premium/abone ogeleri */
+  --jah-gold-subtle: rgba(201, 162, 39, 0.14);
+  --jah-purple: #9146FF;                   /* Twitch mirasi / nostalji vurgulari */
+  --jah-purple-deep: #772CE8;
+
+  /* ---------- Renk: durum ---------- */
+  --jah-live: #53FC18;                     /* canli yesili: izlenen Kick kanali canli */
+  --jah-kick: #53FC18;                     /* Kick marka yesili (platform ikonu/vurgusu) */
+  --jah-onair: #EB0400;                    /* ON AIR kirmizisi: kendi yayinin/kaydin acik */
+  --jah-onair-pulse: rgba(235, 4, 0, 0.35);/* ON AIR nabiz dis halkasi */
+  --jah-danger: #E5383B;                   /* Balta Kirmizisi: yikici eylem, hata */
+  --jah-danger-subtle: rgba(229, 56, 59, 0.14);
+  --jah-warning: #F5A524;                  /* uyari: guncelleme, sertifika sorunu */
+  --jah-success: #53FC18;                  /* basari = aksan yesili ("jahW") */
+  --jah-info: #3B9EFF;                     /* bilgi bildirimleri */
+
+  /* ---------- Renk: chat ---------- */
+  --jah-chat-bg: #0F1214;
+  --jah-chat-text: #F2F2F0;
+  --jah-chat-timestamp: #6B7178;
+  --jah-chat-highlight: rgba(83, 252, 24, 0.10);
+  --jah-chat-mention: #F5A524;
+  --jah-chat-mod: #53FC18;
+  --jah-chat-sub: #C9A227;
+  --jah-chat-user-1: #FF6B6B;
+  --jah-chat-user-2: #4ECDC4;
+  --jah-chat-user-3: #FFD93D;
+  --jah-chat-user-4: #6BCB77;
+  --jah-chat-user-5: #4D96FF;
+  --jah-chat-user-6: #C77DFF;
+  --jah-chat-user-7: #FF9F45;
+  --jah-chat-user-8: #F473B9;
+
+  /* ---------- Tipografi (sistem yigini, dis font yok) ---------- */
+  --jah-font-ui: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --jah-font-mono: "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace;
+
+  /* Boyut olcegi (taban 14px, oran ~1.25) */
+  --jah-font-size-xs: 11px;                /* micro: rozetler (LIVE/ON AIR), sayaclar */
+  --jah-font-size-sm: 12px;                /* caption: ikincil bilgi, sekme basligi */
+  --jah-font-size-md: 14px;                /* body: varsayilan UI metni */
+  --jah-font-size-lg: 16px;                /* heading: bolum/kart basliklari */
+  --jah-font-size-xl: 20px;                /* title: dialog/ayar basliklari */
+  --jah-font-size-display: 28px;           /* Salut ekrani basligi */
+  --jah-font-size-chat: 13px;              /* chat mesaj metni (12-16px ayarlanabilir) */
+
+  /* Satir yukseklikleri */
+  --jah-line-xs: 14px;
+  --jah-line-sm: 16px;
+  --jah-line-md: 20px;
+  --jah-line-lg: 22px;
+  --jah-line-xl: 26px;
+  --jah-line-display: 34px;
+  --jah-line-chat: 19px;
+
+  /* Agirliklar */
+  --jah-weight-regular: 400;
+  --jah-weight-medium: 500;
+  --jah-weight-semibold: 600;
+  --jah-weight-bold: 700;
+
+  /* Rozet dizgisi */
+  --jah-badge-letter-spacing: 0.06em;
+
+  /* ---------- Spacing (4px taban grid) ---------- */
+  --jah-space-1: 4px;                      /* ikon-metin arasi */
+  --jah-space-2: 8px;                      /* buton dikey padding, chat satir arasi */
+  --jah-space-3: 12px;                     /* kart ic padding */
+  --jah-space-4: 16px;                     /* panel ic padding, standart bosluk */
+  --jah-space-6: 24px;                     /* bolumler arasi */
+  --jah-space-8: 32px;                     /* sayfa kenar bosluklari */
+
+  /* ---------- Radius ---------- */
+  --jah-radius-sm: 4px;                    /* rozet, input */
+  --jah-radius-md: 8px;                    /* buton, kart, sekme */
+  --jah-radius-lg: 12px;                   /* dialog, Salut kartlari */
+  --jah-radius-full: 999px;                /* LIVE pill, avatar */
+
+  /* ---------- Shadow (derinlik = acik yuzey; golge minimal) ---------- */
+  --jah-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --jah-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --jah-shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.6);
+  --jah-shadow-glow: var(--jah-accent-glow);
+
+  /* ---------- Transition / motion ---------- */
+  --jah-duration-fast: 120ms;              /* hover, focus */
+  --jah-duration-base: 200ms;              /* panel acilis */
+  --jah-duration-slow: 320ms;              /* tema gecisi, glow fade */
+  --jah-ease: cubic-bezier(0.2, 0, 0, 1);
+  --jah-transition-fast: var(--jah-duration-fast) var(--jah-ease);
+  --jah-transition-base: var(--jah-duration-base) var(--jah-ease);
+  --jah-transition-slow: var(--jah-duration-slow) var(--jah-ease);
+
+  /* ---------- Yerlesim sabitleri ---------- */
+  --jah-tab-height: 36px;
+  --jah-omnibox-height: 40px;
+  --jah-sidebar-width: 240px;
+  --jah-chat-panel-width: 340px;
+}
+
+/* ============================================================
+   Utility siniflari
+   ============================================================ */
+
+/* LIVE rozeti — yesil pill, koyu metin (izlenen kanal canli) */
+.jah-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jah-space-1);
+  background: var(--jah-live);
+  color: var(--jah-text-on-accent);
+  font-family: var(--jah-font-ui);
+  font-size: var(--jah-font-size-xs);
+  line-height: var(--jah-line-xs);
+  font-weight: var(--jah-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--jah-badge-letter-spacing);
+  padding: 2px var(--jah-space-2);
+  border-radius: var(--jah-radius-full);
+}
+
+/* ON AIR rozeti — kirmizi pill, beyaz metin, nabiz atan nokta (sen yayindasin) */
+.jah-badge-onair {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jah-space-1);
+  background: var(--jah-onair);
+  color: var(--jah-text-on-danger);
+  font-family: var(--jah-font-ui);
+  font-size: var(--jah-font-size-xs);
+  line-height: var(--jah-line-xs);
+  font-weight: var(--jah-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--jah-badge-letter-spacing);
+  padding: 2px var(--jah-space-2);
+  border-radius: var(--jah-radius-full);
+}
+
+.jah-badge-onair::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--jah-radius-full);
+  background: var(--jah-text-on-danger);
+  box-shadow: 0 0 0 0 var(--jah-onair-pulse);
+  animation: jah-pulse 2s ease-in-out infinite;
+}
+
+@keyframes jah-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--jah-onair-pulse); }
+  70%  { box-shadow: 0 0 0 6px rgba(235, 4, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(235, 4, 0, 0); }
+}
+
+/* Buton — varsayilan (yuzey) ve birincil (aksan) varyantlari */
+.jah-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jah-space-1);
+  background: var(--jah-surface-2);
+  color: var(--jah-text);
+  border: 1px solid var(--jah-border);
+  font-family: var(--jah-font-ui);
+  font-size: var(--jah-font-size-md);
+  line-height: var(--jah-line-md);
+  font-weight: var(--jah-weight-semibold);
+  padding: var(--jah-space-2) var(--jah-space-4);
+  border-radius: var(--jah-radius-md);
+  cursor: pointer;
+  transition: background var(--jah-transition-fast),
+              border-color var(--jah-transition-fast),
+              box-shadow var(--jah-transition-fast);
+}
+
+.jah-btn:hover {
+  background: var(--jah-surface-overlay);
+  border-color: var(--jah-border-strong);
+}
+
+.jah-btn:focus-visible {
+  outline: 2px solid var(--jah-accent);
+  outline-offset: 2px;
+}
+
+.jah-btn:disabled {
+  color: var(--jah-text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.jah-btn--primary {
+  background: var(--jah-accent);
+  color: var(--jah-text-on-accent);
+  border-color: transparent;
+}
+
+.jah-btn--primary:hover {
+  background: var(--jah-accent-hover);
+  border-color: transparent;
+}
+
+.jah-btn--primary:active {
+  background: var(--jah-accent-pressed);
+}
+
+.jah-btn--danger {
+  background: var(--jah-danger);
+  color: var(--jah-text-on-danger);
+  border-color: transparent;
+}
+
+/* Kart — panel/Salut ekrani kart yuzeyi */
+.jah-card {
+  background: var(--jah-surface);
+  color: var(--jah-text);
+  border: 1px solid var(--jah-border);
+  border-radius: var(--jah-radius-lg);
+  padding: var(--jah-space-4);
+  font-family: var(--jah-font-ui);
+  font-size: var(--jah-font-size-md);
+  line-height: var(--jah-line-md);
+  transition: border-color var(--jah-transition-fast),
+              box-shadow var(--jah-transition-slow);
+}
+
+.jah-card:hover {
+  border-color: var(--jah-border-strong);
+}
+
+/* Canli kanal karti: yesil glow ("Jahrein yayinda") */
+.jah-card--live {
+  border-color: var(--jah-live);
+  box-shadow: var(--jah-accent-glow);
+}
