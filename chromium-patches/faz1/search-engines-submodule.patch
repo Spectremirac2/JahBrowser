@@ -1,0 +1,74 @@
+diff --git a/definitions/prepopulated_engines.json b/definitions/prepopulated_engines.json
+index c899bcb..45498ae 100644
+--- a/definitions/prepopulated_engines.json
++++ b/definitions/prepopulated_engines.json
+@@ -22,18 +22,67 @@
+     // use a lower number. This number is used by UMA stats and must be updated
+     // to include the full range or else not all engines will be counted in
+     // stats.
+-    "kMaxPrepopulatedEngineID": 116,
++    "kMaxPrepopulatedEngineID": 121,
+ 
+     // Increment this if you change the data in ways that mean users with
+     // existing data should get a new version. Otherwise, existing data may
+     // continue to be used and updates made here will not always appear.
+     // Also then run tools/search_engine_choice/generate_search_engine_icons.py.
+-    "kCurrentDataVersion": 209
++    "kCurrentDataVersion": 210
+   },
+ 
+   // The following engines are included in country lists and are added to the
+   // list of search engines on the first run depending on user's country.
+   "elements": {
++    // JahBrowser: built-in address-bar keyword shortcuts. Type the keyword +
++    // space + query (e.g. "yt kediler") to search that site directly. Kick
++    // first (Kick birincil). Appended for every profile in
++    // template_url_prepopulate_data.cc GetPrepopulatedEngines().
++    "jah_kick": {
++      "name": "Kick Arama",
++      "keyword": "kick",
++      "favicon_url": "https://kick.com/favicon.ico",
++      "search_url": "https://kick.com/search?query={searchTerms}",
++      "type": "SEARCH_ENGINE_OTHER",
++      "id": 117
++    },
++
++    "jah_youtube": {
++      "name": "YouTube Arama",
++      "keyword": "yt",
++      "favicon_url": "https://www.youtube.com/favicon.ico",
++      "search_url": "https://www.youtube.com/results?search_query={searchTerms}",
++      "type": "SEARCH_ENGINE_OTHER",
++      "id": 118
++    },
++
++    "jah_twitch": {
++      "name": "Twitch Arama",
++      "keyword": "tw",
++      "favicon_url": "https://www.twitch.tv/favicon.ico",
++      "search_url": "https://www.twitch.tv/search?term={searchTerms}",
++      "type": "SEARCH_ENGINE_OTHER",
++      "id": 119
++    },
++
++    "jah_github": {
++      "name": "GitHub Arama",
++      "keyword": "gh",
++      "favicon_url": "https://github.com/favicon.ico",
++      "search_url": "https://github.com/search?q={searchTerms}",
++      "type": "SEARCH_ENGINE_OTHER",
++      "id": 120
++    },
++
++    "jah_wiki": {
++      "name": "Vikipedi (TR)",
++      "keyword": "wiki",
++      "favicon_url": "https://tr.wikipedia.org/static/favicon/wikipedia.ico",
++      "search_url": "https://tr.wikipedia.org/w/index.php?search={searchTerms}",
++      "type": "SEARCH_ENGINE_OTHER",
++      "id": 121
++    },
++
+     "baidu": {
+       "name": "\u767e\u5ea6",
+       "keyword": "baidu.com",

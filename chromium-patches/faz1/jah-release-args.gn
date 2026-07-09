@@ -1,0 +1,33 @@
+# JahBrowser — release/dağıtım build GN argümanları (şablon)
+#
+# Kullanım: E:\src\chromium\src içinde
+#   gn gen out/Release --args="$(cat this-file)"
+# ya da bu içeriği out/Release/args.gn'e kopyala.
+#
+# Geliştirme (hızlı artımlı) build'i out/Default'ta component_build ile ayrı yaşar;
+# bu şablon DAĞITIM içindir (tek binary, optimize, imzalanabilir).
+
+# --- Sürüm / optimizasyon ---
+is_debug = false
+is_official_build = true          # release optimizasyonları (LTO vb.)
+is_component_build = false        # dağıtım için tek binary
+symbol_level = 1                  # kabul edilebilir crash sembolizasyonu
+
+# --- KRİTİK: video kararlılığı ön koşulu (stabilite araştırması, 2026-07-06) ---
+# Bu ikisi BİRLİKTE olmalı: donanım H.264/AAC decode çökünce video kararmak
+# yerine yazılım (bundled ffmpeg) decoder'a düşüp OYNAMAYA DEVAM eder.
+# CI'da assert edilmeli — biri eksikse yayın izlerken video kararabilir.
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+
+# --- Marka (ayrı branding patch ile birlikte) ---
+# chrome_pgo_phase, branding vb. resmi imzalama/marka adımında set edilir.
+
+# ======================================================================
+# YASAKLI KOMUT-SATIRI BAYRAKLARI — hiçbir release/installer/launcher'da
+# gönderilmemeli (GPU kararlılık merdivenini bozar):
+#   --disable-gpu-process-crash-limit     (3-çökmede software fallback'i kapatır)
+#   --disable-gpu-driver-bug-workarounds  (bozuk sürücü workaround'larını kapatır)
+#   --ignore-gpu-blocklist                (bilinen kötü GPU'ları zorlar)
+#   --disable-gpu-watchdog                (asılı GPU'yu tespit etmez)
+# ======================================================================

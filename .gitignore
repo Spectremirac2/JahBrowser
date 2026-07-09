@@ -1,0 +1,46 @@
+# === Dependencies ===
+node_modules/
+
+# === Build output ===
+dist/
+out/
+build/
+*.exe
+*.msi
+*.zip
+*.7z
+*.pdb
+
+# === Secrets / signing ===
+.env
+.env.*
+*.pem
+*.pfx
+*.key
+secrets/
+*.secret
+
+# === Editor / OS ===
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+*.log
+npm-debug.log*
+
+# === Chromium user-profile / runtime data ===
+# (blocked so running the browser inside the repo folder can never leak profile data)
+Default/
+Crashpad/
+GPUPersistentCache/
+Variations
+Local State
+Last Browser
+Last Version
+BrowserMetrics*.pma
+first_party_sets.db*
+segmentation_platform/
+component_crx_cache/
+extensions_crx_cache/
+*ShaderCache/
+GraphiteDawnCache/

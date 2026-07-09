@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JahBrowser — Kick Yan Paneli (Prototip)</title>
+<link rel="stylesheet" href="../tokens/jah-theme.css">
+<style>
+  /* ============================================================
+     JahBrowser — Kick Live Sidebar Prototipi
+     Yalnizca --jah-* tokenlari; hardcoded hex yok.
+     ============================================================ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: var(--jah-font-ui);
+    background: var(--jah-bg-deep);
+    color: var(--jah-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--jah-space-3);
+    padding: var(--jah-space-6);
+    /* Sahne: cok dusuk yogunlukta aksan nefesi + vinyet */
+    background-image:
+      radial-gradient(1100px 520px at 78% -10%, var(--jah-accent-subtle), transparent 62%),
+      radial-gradient(900px 700px at 12% 110%, rgba(145, 70, 255, 0.05), transparent 60%);
+  }
+
+  .stage-caption {
+    font-size: var(--jah-font-size-sm);
+    line-height: var(--jah-line-sm);
+    color: var(--jah-text-muted);
+    letter-spacing: 0.02em;
+    user-select: none;
+  }
+  .stage-caption strong { color: var(--jah-text-dim); font-weight: var(--jah-weight-semibold); }
+
+  /* ---------- Panel govdesi ---------- */
+  .sidebar {
+    width: 320px;
+    height: min(700px, calc(100vh - 96px));
+    min-height: 480px;
+    background: var(--jah-surface);
+    border: 1px solid var(--jah-border);
+    border-radius: var(--jah-radius-lg);
+    box-shadow: var(--jah-shadow-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ---------- Header ---------- */
+  .sb-header {
+    padding: var(--jah-space-3) var(--jah-space-4);
+    border-bottom: 1px solid var(--jah-border);
+    background: linear-gradient(180deg, var(--jah-surface-2), var(--jah-surface));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--jah-space-2);
+    flex: none;
+  }
+
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-2);
+    user-select: none;
+  }
+
+  .wordmark-bolt {
+    width: 18px; height: 18px;
+    color: var(--jah-accent);
+    filter: drop-shadow(0 0 6px rgba(83, 252, 24, 0.45));
+    flex: none;
+  }
+
+  .wordmark-text {
+    font-size: var(--jah-font-size-lg);
+    line-height: var(--jah-line-lg);
+    font-weight: var(--jah-weight-bold);
+    letter-spacing: -0.015em;
+  }
+  .wordmark-text span { color: var(--jah-text-dim); font-weight: var(--jah-weight-medium); }
+
+  .broadcast-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-2);
+  }
+
+  .broadcast-label {
+    font-size: 9px;
+    line-height: 12px;
+    font-weight: var(--jah-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--jah-text-muted);
+    text-align: right;
+  }
+
+  /* ---------- Kaydirma alani ---------- */
+  .sb-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--jah-space-3) var(--jah-space-3) var(--jah-space-4);
+    scrollbar-width: thin;
+    scrollbar-color: var(--jah-border-strong) transparent;
+  }
+  .sb-scroll::-webkit-scrollbar { width: 8px; }
+  .sb-scroll::-webkit-scrollbar-thumb {
+    background: var(--jah-border);
+    border-radius: var(--jah-radius-full);
+    border: 2px solid var(--jah-surface);
+  }
+  .sb-scroll::-webkit-scrollbar-thumb:hover { background: var(--jah-border-strong); }
+
+  /* ---------- Bolum basliklari ---------- */
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: var(--jah-space-2);
+    padding: var(--jah-space-2) var(--jah-space-1);
+    margin-top: var(--jah-space-2);
+    user-select: none;
+  }
+  .section-head:first-child { margin-top: 0; }
+
+  .section-title {
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    font-weight: var(--jah-weight-bold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--jah-text-dim);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-1);
+  }
+
+  .section-title .dot {
+    width: 6px; height: 6px;
+    border-radius: var(--jah-radius-full);
+    background: var(--jah-live);
+    box-shadow: 0 0 6px rgba(83, 252, 24, 0.55);
+    flex: none;
+  }
+  .section-title .dot--off { background: var(--jah-text-muted); box-shadow: none; }
+
+  .section-count {
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    font-weight: var(--jah-weight-semibold);
+    color: var(--jah-text-muted);
+    background: var(--jah-surface-2);
+    border: 1px solid var(--jah-border);
+    padding: 0 var(--jah-space-2);
+    border-radius: var(--jah-radius-full);
+  }
+
+  .section-rule {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--jah-border), transparent);
+  }
+
+  /* ---------- Sabitlenmis Jahrein karti ---------- */
+  .pinned-card {
+    position: relative;
+    background: var(--jah-surface-2);
+    border: 1px solid var(--jah-live);
+    border-radius: var(--jah-radius-lg);
+    padding: var(--jah-space-3);
+    margin-bottom: var(--jah-space-2);
+    box-shadow: var(--jah-accent-glow);
+    cursor: pointer;
+    transition: box-shadow var(--jah-transition-slow),
+                background var(--jah-transition-fast),
+                transform var(--jah-transition-fast);
+    overflow: hidden;
+  }
+  .pinned-card::before {
+    /* icten yesil nefes — hover'da guclenir */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(220px 90px at 18% 0%, var(--jah-accent-subtle), transparent 70%);
+    opacity: 0.7;
+    pointer-events: none;
+    transition: opacity var(--jah-transition-base);
+  }
+  .pinned-card:hover {
+    background: var(--jah-surface-overlay);
+    box-shadow: 0 0 18px rgba(83, 252, 24, 0.55);
+    transform: translateY(-1px);
+  }
+  .pinned-card:hover::before { opacity: 1; }
+  .pinned-card:active { transform: translateY(0); }
+  .pinned-card:focus-visible {
+    outline: 2px solid var(--jah-accent);
+    outline-offset: 2px;
+  }
+
+  .pinned-top {
+    display: flex;
+    align-items: center;
+    gap: var(--jah-space-3);
+    position: relative;
+  }
+
+  .pin-flag {
+    position: absolute;
+    top: calc(-1 * var(--jah-space-1));
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-1);
+    color: var(--jah-text-muted);
+    font-size: 9px;
+    line-height: 12px;
+    font-weight: var(--jah-weight-semibold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .pin-flag svg { width: 10px; height: 10px; }
+
+  .avatar {
+    position: relative;
+    flex: none;
+    border-radius: var(--jah-radius-full);
+    display: grid;
+    place-items: center;
+    font-weight: var(--jah-weight-bold);
+    color: var(--jah-text-on-accent);
+    user-select: none;
+  }
+  .avatar--xl { width: 48px; height: 48px; font-size: var(--jah-font-size-lg); }
+  .avatar--md { width: 36px; height: 36px; font-size: var(--jah-font-size-sm); }
+
+  .avatar--ring-live {
+    box-shadow: 0 0 0 2px var(--jah-surface-2), 0 0 0 4px var(--jah-live);
+  }
+
+  .avatar .platform-chip {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 16px; height: 16px;
+    border-radius: var(--jah-radius-sm);
+    background: var(--jah-bg);
+    border: 1px solid var(--jah-border-strong);
+    display: grid;
+    place-items: center;
+  }
+  .avatar .platform-chip svg { width: 9px; height: 9px; }
+
+  .platform-kick { color: var(--jah-kick); }
+  .platform-twitch { color: var(--jah-purple); }
+
+  .pinned-id { min-width: 0; flex: 1; }
+
+  .pinned-name {
+    display: flex;
+    align-items: center;
+    gap: var(--jah-space-2);
+    font-size: var(--jah-font-size-lg);
+    line-height: var(--jah-line-lg);
+    font-weight: var(--jah-weight-bold);
+    letter-spacing: -0.01em;
+  }
+
+  .pinned-cat {
+    font-size: var(--jah-font-size-sm);
+    line-height: var(--jah-line-sm);
+    color: var(--jah-text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+
+  .pinned-stats {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--jah-space-3);
+    margin-top: var(--jah-space-3);
+    padding-top: var(--jah-space-2);
+    border-top: 1px solid var(--jah-border);
+  }
+
+  .stat {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-1);
+    font-size: var(--jah-font-size-sm);
+    line-height: var(--jah-line-sm);
+    color: var(--jah-text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat svg { width: 12px; height: 12px; color: var(--jah-text-muted); flex: none; }
+
+  .stat--viewers { color: var(--jah-text); font-weight: var(--jah-weight-semibold); }
+  .stat--viewers::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: var(--jah-radius-full);
+    background: var(--jah-onair); /* Kick geleneği: izleyici sayacinin kirmizi noktasi */
+    box-shadow: 0 0 0 0 var(--jah-onair-pulse);
+    animation: jah-pulse 2s ease-in-out infinite;
+    flex: none;
+  }
+
+  .pinned-watch {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-1);
+    background: var(--jah-accent);
+    color: var(--jah-text-on-accent);
+    border: none;
+    font-family: inherit;
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    font-weight: var(--jah-weight-bold);
+    letter-spacing: var(--jah-badge-letter-spacing);
+    text-transform: uppercase;
+    padding: var(--jah-space-1) var(--jah-space-2);
+    border-radius: var(--jah-radius-md);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateX(4px);
+    transition: opacity var(--jah-transition-fast),
+                transform var(--jah-transition-fast),
+                background var(--jah-transition-fast);
+  }
+  .pinned-card:hover .pinned-watch,
+  .pinned-card:focus-visible .pinned-watch { opacity: 1; transform: translateX(0); }
+  .pinned-watch:hover { background: var(--jah-accent-hover); }
+  .pinned-watch:active { background: var(--jah-accent-pressed); }
+  .pinned-watch svg { width: 10px; height: 10px; }
+
+  /* ---------- Kanal satirlari ---------- */
+  .channel-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .channel-row {
+    display: flex;
+    align-items: center;
+    gap: var(--jah-space-3);
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--jah-radius-md);
+    padding: var(--jah-space-2) var(--jah-space-2);
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: background var(--jah-transition-fast),
+                border-color var(--jah-transition-fast);
+  }
+  .channel-row:hover {
+    background: var(--jah-surface-2);
+    border-color: var(--jah-border);
+  }
+  .channel-row:focus-visible {
+    outline: 2px solid var(--jah-accent);
+    outline-offset: -2px;
+  }
+
+  .row-main { min-width: 0; flex: 1; }
+
+  .row-name {
+    display: flex;
+    align-items: center;
+    gap: var(--jah-space-1);
+    font-size: var(--jah-font-size-md);
+    line-height: var(--jah-line-md);
+    font-weight: var(--jah-weight-semibold);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .row-name .nm { overflow: hidden; text-overflow: ellipsis; }
+
+  .row-sub {
+    font-size: var(--jah-font-size-sm);
+    line-height: var(--jah-line-sm);
+    color: var(--jah-text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .row-meta {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .row-viewers {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-1);
+    font-size: var(--jah-font-size-sm);
+    line-height: var(--jah-line-sm);
+    font-weight: var(--jah-weight-semibold);
+    color: var(--jah-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .row-viewers::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: var(--jah-radius-full);
+    background: var(--jah-live);
+    flex: none;
+  }
+
+  .row-uptime {
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    color: var(--jah-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row-go {
+    flex: none;
+    width: 0;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    color: var(--jah-text-muted);
+    opacity: 0;
+    transition: width var(--jah-transition-fast),
+                opacity var(--jah-transition-fast),
+                color var(--jah-transition-fast);
+  }
+  .row-go svg { width: 14px; height: 14px; }
+  .channel-row:hover .row-go { width: 16px; opacity: 1; color: var(--jah-text-dim); }
+
+  /* Cevrimdisi satirlar */
+  .channel-row--offline .avatar { filter: grayscale(1) brightness(0.72); }
+  .channel-row--offline .row-name { color: var(--jah-text-dim); font-weight: var(--jah-weight-medium); }
+  .channel-row--offline .row-sub { color: var(--jah-text-muted); }
+  .channel-row--offline:hover .avatar { filter: grayscale(0.6) brightness(0.85); }
+
+  .offline-since {
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    color: var(--jah-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Kompakt yogunluk ---------- */
+  .sidebar[data-density="compact"] .channel-row { padding: var(--jah-space-1) var(--jah-space-2); gap: var(--jah-space-2); }
+  .sidebar[data-density="compact"] .channel-row .avatar--md { width: 26px; height: 26px; font-size: var(--jah-font-size-xs); }
+  .sidebar[data-density="compact"] .channel-row .platform-chip { width: 13px; height: 13px; }
+  .sidebar[data-density="compact"] .channel-row .platform-chip svg { width: 7px; height: 7px; }
+  .sidebar[data-density="compact"] .row-sub { display: none; }
+  .sidebar[data-density="compact"] .row-uptime { display: none; }
+  .sidebar[data-density="compact"] .pinned-card { padding: var(--jah-space-2) var(--jah-space-3); }
+  .sidebar[data-density="compact"] .avatar--xl { width: 38px; height: 38px; font-size: var(--jah-font-size-md); }
+  .sidebar[data-density="compact"] .pinned-cat { display: none; }
+  .sidebar[data-density="compact"] .pinned-stats { margin-top: var(--jah-space-2); }
+
+  /* ---------- Alt bar ---------- */
+  .sb-footer {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--jah-space-2);
+    padding: var(--jah-space-2) var(--jah-space-3);
+    border-top: 1px solid var(--jah-border);
+    background: var(--jah-surface);
+  }
+
+  .footer-summary {
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    color: var(--jah-text-muted);
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .footer-summary b { color: var(--jah-text-dim); font-weight: var(--jah-weight-semibold); }
+
+  .density-toggle {
+    flex: none;
+    display: inline-flex;
+    background: var(--jah-bg);
+    border: 1px solid var(--jah-border);
+    border-radius: var(--jah-radius-md);
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .density-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--jah-space-1);
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--jah-radius-md) - 2px);
+    color: var(--jah-text-muted);
+    font-family: inherit;
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    font-weight: var(--jah-weight-semibold);
+    padding: 3px var(--jah-space-2);
+    cursor: pointer;
+    transition: background var(--jah-transition-fast), color var(--jah-transition-fast);
+  }
+  .density-btn svg { width: 11px; height: 11px; }
+  .density-btn:hover { color: var(--jah-text-dim); }
+  .density-btn[aria-pressed="true"] {
+    background: var(--jah-surface-overlay);
+    color: var(--jah-text);
+  }
+  .density-btn:focus-visible { outline: 2px solid var(--jah-accent); outline-offset: 1px; }
+
+  /* ---------- "Yayin acti" toast ---------- */
+  .toast-region {
+    position: absolute;
+    left: var(--jah-space-3);
+    right: var(--jah-space-3);
+    bottom: 52px;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--jah-space-3);
+    background: var(--jah-surface-overlay);
+    border: 1px solid var(--jah-border-strong);
+    border-left: 3px solid var(--jah-live);
+    border-radius: var(--jah-radius-md);
+    padding: var(--jah-space-2) var(--jah-space-3);
+    box-shadow: var(--jah-shadow-md), 0 0 14px rgba(83, 252, 24, 0.18);
+    position: relative;
+    overflow: hidden;
+    animation: toast-in 360ms var(--jah-ease) both;
+  }
+  .toast--leaving { animation: toast-out 260ms var(--jah-ease) both; }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(10px) scale(0.97); }
+  }
+
+  .toast .avatar--md { width: 32px; height: 32px; }
+
+  .toast-body { min-width: 0; flex: 1; }
+
+  .toast-line1 {
+    font-size: var(--jah-font-size-sm);
+    line-height: var(--jah-line-sm);
+    font-weight: var(--jah-weight-semibold);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .toast-line1 em {
+    /* aksan yesili metin rengi olarak kullanilmaz (token kurali);
+       canlilik hissi yesil noktadan gelir */
+    font-style: normal;
+    color: var(--jah-text);
+    font-weight: var(--jah-weight-bold);
+  }
+  .toast-line2 {
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    color: var(--jah-text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .toast-live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: var(--jah-radius-full);
+    background: var(--jah-live);
+    box-shadow: 0 0 6px rgba(83, 252, 24, 0.6);
+    margin-right: 2px;
+    vertical-align: 1px;
+  }
+
+  .toast-watch {
+    flex: none;
+    background: var(--jah-accent);
+    color: var(--jah-text-on-accent);
+    border: none;
+    font-family: inherit;
+    font-size: var(--jah-font-size-xs);
+    line-height: var(--jah-line-xs);
+    font-weight: var(--jah-weight-bold);
+    letter-spacing: var(--jah-badge-letter-spacing);
+    text-transform: uppercase;
+    padding: var(--jah-space-1) var(--jah-space-2);
+    border-radius: var(--jah-radius-sm);
+    cursor: pointer;
+    transition: background var(--jah-transition-fast);
+  }
+  .toast-watch:hover { background: var(--jah-accent-hover); }
+  .toast-watch:active { background: var(--jah-accent-pressed); }
+
+  .toast-close {
+    flex: none;
+    background: transparent;
+    border: none;
+    color: var(--jah-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--jah-radius-sm);
+    transition: color var(--jah-transition-fast), background var(--jah-transition-fast);
+  }
+  .toast-close:hover { color: var(--jah-text); background: var(--jah-surface-2); }
+  .toast-close svg { width: 12px; height: 12px; }
+
+  .toast-progress {
+    position: absolute;
+    left: 0; bottom: 0;
+    height: 2px;
+    background: var(--jah-live);
+    opacity: 0.5;
+    width: 100%;
+    transform-origin: left;
+    animation: toast-progress linear both;
+  }
+  @keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- SVG sembol havuzu -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-bolt" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M9.5 1 3 9h3.5L6 15l6.5-8H9z"/>
+      </symbol>
+      <symbol id="i-kick" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M1 1h5v4h2V3h2V1h5v5h-2v2h-2v2h2v2h2v5h-5v-2h-2v-2H8v4H1z"/>
+      </symbol>
+      <symbol id="i-twitch" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M3 2 1.5 5.5V19h5v3h3l3-3h4l6-6V2H3zm17.5 10.5-3.5 3.5h-5l-3 3v-3H5V4h15.5v8.5zM15 6.5h2V12h-2V6.5zm-5 0h2V12h-2V6.5z"/>
+      </symbol>
+      <symbol id="i-pin" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M9.5 1 15 6.5l-2 2-.7-.7-2.8 2.8.5 2.9-1.5 1.5-3-3L2 15.5.5 14 4 10.5l-3-3L2.5 6l2.9.5 2.8-2.8-.7-.7z"/>
+      </symbol>
+      <symbol id="i-clock" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 12.6A5.6 5.6 0 1 1 8 2.4a5.6 5.6 0 0 1 0 11.2zM8.7 4H7.3v4.6l3.6 2.1.7-1.2-2.9-1.7z"/>
+      </symbol>
+      <symbol id="i-play" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M4 2.5v11l9-5.5z"/>
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 16 16">
+        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m6 3 5 5-5 5"/>
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 16 16">
+        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 3l10 10M13 3 3 13"/>
+      </symbol>
+      <symbol id="i-rows-comfy" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M2 2h12v5H2zm0 7h12v5H2z"/>
+      </symbol>
+      <symbol id="i-rows-compact" viewBox="0 0 16 16">
+        <path fill="currentColor" d="M2 2h12v3H2zm0 4.5h12v3H2zM2 11h12v3H2z"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- ============ YAN PANEL ============ -->
+  <aside class="sidebar" data-density="comfortable" aria-label="JahBrowser canlı yayın paneli">
+
+    <!-- Header -->
+    <header class="sb-header">
+      <div class="wordmark" title="JahBrowser">
+        <svg class="wordmark-bolt" aria-hidden="true"><use href="#i-bolt"/></svg>
+        <div class="wordmark-text">Jah<span>Browser</span></div>
+      </div>
+      <div class="broadcast-state" title="Yayın Modu: kendi yayının açık">
+        <div class="broadcast-label">Yayın<br>Modu</div>
+        <span class="jah-badge-onair">On Air</span>
+      </div>
+    </header>
+
+    <!-- Liste -->
+    <div class="sb-scroll" id="scrollArea">
+
+      <!-- CANLI -->
+      <div class="section-head">
+        <span class="section-title"><span class="dot"></span>Canlı</span>
+        <span class="section-count" id="liveCount">4</span>
+        <span class="section-rule"></span>
+      </div>
+
+      <!-- Sabitlenmis Jahrein karti -->
+      <article class="pinned-card" tabindex="0" role="button" aria-label="Jahrein canlı yayınını izle">
+        <div class="pinned-top">
+          <span class="pin-flag"><svg aria-hidden="true"><use href="#i-pin"/></svg>Sabit</span>
+          <div class="avatar avatar--xl avatar--ring-live" id="jahreinAvatar">J
+            <span class="platform-chip platform-kick" title="Kick">
+              <svg aria-hidden="true"><use href="#i-kick"/></svg>
+            </span>
+          </div>
+          <div class="pinned-id">
+            <div class="pinned-name">Jahrein <span class="jah-badge-live">Canlı</span></div>
+            <div class="pinned-cat" id="jahreinCat">Sadece Sohbet · Türkçe</div>
+          </div>
+        </div>
+        <div class="pinned-stats">
+          <span class="stat stat--viewers" id="jahreinViewers" title="12.437 izleyici">12,4&nbsp;B izleyici</span>
+          <span class="stat" title="Yayın süresi">
+            <svg aria-hidden="true"><use href="#i-clock"/></svg>
+            <span id="jahreinUptime">3:42:18</span>
+          </span>
+          <button class="pinned-watch" type="button">
+            <svg aria-hidden="true"><use href="#i-play"/></svg>İzle
+          </button>
+        </div>
+      </article>
+
+      <!-- Canli kanal satirlari (JS doldurur) -->
+      <div class="channel-list" id="liveList"></div>
+
+      <!-- CEVRIMDISI -->
+      <div class="section-head">
+        <span class="section-title"><span class="dot dot--off"></span>Çevrimdışı</span>
+        <span class="section-count" id="offlineCount">3</span>
+        <span class="section-rule"></span>
+      </div>
+      <div class="channel-list" id="offlineList"></div>
+    </div>
+
+    <!-- Toast bolgesi -->
+    <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
+
+    <!-- Alt bar -->
+    <footer class="sb-footer">
+      <div class="footer-summary" id="footerSummary"><b>4 canlı</b> · 7 kanal takipte</div>
+      <div class="density-toggle" role="group" aria-label="Liste yoğunluğu">
+        <button class="density-btn" type="button" data-density="comfortable" aria-pressed="true" title="Rahat görünüm">
+          <svg aria-hidden="true"><use href="#i-rows-comfy"/></svg>Rahat
+        </button>
+        <button class="density-btn" type="button" data-density="compact" aria-pressed="false" title="Kompakt görünüm">
+          <svg aria-hidden="true"><use href="#i-rows-compact"/></svg>Kompakt
+        </button>
+      </div>
+    </footer>
+  </aside>
+
+  <p class="stage-caption">JahBrowser prototipi · <strong>Kick canlı yan paneli</strong> · 320px statik önizleme</p>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Mock veri ---------- */
+  // Avatar zeminleri: yalnizca chat kullanici renk tokenlari.
+  var PALETTE = [
+    "--jah-chat-user-2", "--jah-chat-user-6", "--jah-chat-user-1",
+    "--jah-chat-user-5", "--jah-chat-user-7", "--jah-chat-user-4",
+    "--jah-chat-user-3", "--jah-chat-user-8"
+  ];
+
+  var channels = [
+    { name: "Elraenn",          platform: "kick",   live: true,  viewers: 23951, category: "League of Legends",  uptimeSec: 5 * 3600 + 12 * 60 + 40, palette: 0 },
+    { name: "KendineMüzisyen",  platform: "twitch", live: true,  viewers: 8104,  category: "GTA V · Rockday RP", uptimeSec: 1 * 3600 + 58 * 60 + 6,  palette: 1 },
+    { name: "Pqueen",           platform: "kick",   live: true,  viewers: 6742,  category: "Sadece Sohbet",      uptimeSec: 47 * 60 + 21,            palette: 2 },
+    { name: "wtcN",             platform: "twitch", live: false, lastSeen: "5 sa önce",  category: "Valorant",   palette: 3 },
+    { name: "unlostv",          platform: "kick",   live: false, lastSeen: "dün",        category: "CS2",        palette: 4 },
+    { name: "Ferit",            platform: "twitch", live: false, lastSeen: "2 gün önce", category: "Sadece Sohbet", palette: 5 }
+  ];
+
+  var jahrein = { viewers: 12437, uptimeSec: 3 * 3600 + 42 * 60 + 18 };
+
+  /* ---------- Yardimcilar ---------- */
+  function fmtViewersTR(n) {
+    // Kick/TR kisaltmasi: 12437 -> "12,4 B"
+    if (n >= 1000) {
+      var v = n / 1000;
+      var r = Math.round(v * 10) / 10; // 12437 -> 12,4 ; 23951 -> 24
+      var frac = (r % 1 !== 0 && r < 100) ? 1 : 0;
+      var s = r.toLocaleString("tr-TR", { minimumFractionDigits: frac, maximumFractionDigits: frac });
+      return s + " B";
+    }
+    return n.toLocaleString("tr-TR");
+  }
+
+  function fmtUptime(sec) {
+    var h = Math.floor(sec / 3600),
+        m = Math.floor((sec % 3600) / 60),
+        s = sec % 60;
+    function p(x) { return x < 10 ? "0" + x : "" + x; }
+    return h > 0 ? h + ":" + p(m) + ":" + p(s) : m + ":" + p(s);
+  }
+
+  function initials(name) {
+    return name.trim().charAt(0).toUpperCase();
+  }
+
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+
+  function svgUse(id) {
+    return '<svg aria-hidden="true"><use href="#' + id + '"/></svg>';
+  }
+
+  function avatarHTML(ch, sizeCls) {
+    var ringCls = ch.live ? " avatar--ring-live" : "";
+    var varName = PALETTE[ch.palette % PALETTE.length];
+    var platCls = ch.platform === "kick" ? "platform-kick" : "platform-twitch";
+    var platIcon = ch.platform === "kick" ? "i-kick" : "i-twitch";
+    var platTitle = ch.platform === "kick" ? "Kick" : "Twitch";
+    return '<div class="avatar ' + sizeCls + ringCls + '" style="background: linear-gradient(135deg, var(' + varName + '), var(--jah-surface-overlay))">' +
+             initials(ch.name) +
+             '<span class="platform-chip ' + platCls + '" title="' + platTitle + '">' + svgUse(platIcon) + '</span>' +
+           '</div>';
+  }
+
+  /* ---------- Satir olusturma ---------- */
+  function buildRow(ch) {
+    var row = el("button", "channel-row" + (ch.live ? "" : " channel-row--offline"));
+    row.type = "button";
+    row.setAttribute("aria-label", ch.name + (ch.live ? " canlı — izle" : " çevrimdışı"));
+
+    var meta;
+    if (ch.live) {
+      meta = '<div class="row-meta">' +
+               '<span class="row-viewers">' + fmtViewersTR(ch.viewers) + '</span>' +
+               '<span class="row-uptime">' + fmtUptime(ch.uptimeSec) + '</span>' +
+             '</div>';
+    } else {
+      meta = '<div class="row-meta"><span class="offline-since">' + ch.lastSeen + '</span></div>';
+    }
+
+    row.innerHTML =
+      avatarHTML(ch, "avatar--md") +
+      '<div class="row-main">' +
+        '<div class="row-name"><span class="nm">' + ch.name + '</span></div>' +
+        '<div class="row-sub">' + (ch.live ? ch.category : "Son yayın: " + ch.category) + '</div>' +
+      '</div>' +
+      meta +
+      '<span class="row-go">' + svgUse("i-chevron") + '</span>';
+    return row;
+  }
+
+  var liveList = document.getElementById("liveList");
+  var offlineList = document.getElementById("offlineList");
+  var liveChannels = channels.filter(function (c) { return c.live; });
+  var offlineChannels = channels.filter(function (c) { return !c.live; });
+
+  liveChannels.forEach(function (c) { liveList.appendChild(buildRow(c)); });
+  offlineChannels.forEach(function (c) { offlineList.appendChild(buildRow(c)); });
+
+  document.getElementById("liveCount").textContent = String(liveChannels.length + 1); // + Jahrein
+  document.getElementById("offlineCount").textContent = String(offlineChannels.length);
+  document.getElementById("footerSummary").innerHTML =
+    "<b>" + (liveChannels.length + 1) + " canlı</b> · " + (channels.length + 1) + " kanal takipte";
+
+  /* ---------- Jahrein avatar zemini + sayaclar ---------- */
+  var jahAvatar = document.getElementById("jahreinAvatar");
+  jahAvatar.style.background = "linear-gradient(135deg, var(--jah-accent-pressed), var(--jah-surface-overlay))";
+
+  var jahViewers = document.getElementById("jahreinViewers");
+  var jahUptime = document.getElementById("jahreinUptime");
+
+  function renderJahrein() {
+    jahViewers.innerHTML = fmtViewersTR(jahrein.viewers) + " izleyici";
+    jahViewers.title = jahrein.viewers.toLocaleString("tr-TR") + " izleyici";
+    jahUptime.textContent = fmtUptime(jahrein.uptimeSec);
+  }
+  renderJahrein();
+
+  setInterval(function () {
+    jahrein.uptimeSec += 1;
+    // izleyici sayisi hafifce dalgalanir (gercekci his)
+    if (jahrein.uptimeSec % 5 === 0) {
+      jahrein.viewers += Math.round((Math.random() - 0.45) * 60);
+    }
+    renderJahrein();
+  }, 1000);
+
+  /* ---------- Yogunluk (compact / comfortable) ---------- */
+  var sidebar = document.querySelector(".sidebar");
+  var densityBtns = Array.prototype.slice.call(document.querySelectorAll(".density-btn"));
+  densityBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      sidebar.setAttribute("data-density", btn.getAttribute("data-density"));
+      densityBtns.forEach(function (b) {
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+      });
+    });
+  });
+
+  /* ---------- "Yayin acti" toast ---------- */
+  var toastRegion = document.getElementById("toastRegion");
+  var TOAST_MS = 6000;
+  var toastQueue = [
+    { name: "Elraenn", platform: "kick",   palette: 0, category: "League of Legends" },
+    { name: "Pqueen",  platform: "kick",   palette: 2, category: "Sadece Sohbet" },
+    { name: "wtcN",    platform: "twitch", palette: 3, category: "Valorant" }
+  ];
+  var toastIdx = 0;
+  var toastTimer = null;
+
+  function dismissToast(node) {
+    if (!node || node.classList.contains("toast--leaving")) return;
+    node.classList.add("toast--leaving");
+    node.addEventListener("animationend", function () {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    });
+  }
+
+  function showToast(ch) {
+    // eskisini kaldir
+    var old = toastRegion.querySelector(".toast");
+    if (old) dismissToast(old);
+
+    var t = el("div", "toast");
+    t.innerHTML =
+      avatarHTML({ name: ch.name, platform: ch.platform, palette: ch.palette, live: true }, "avatar--md") +
+      '<div class="toast-body">' +
+        '<div class="toast-line1"><span class="toast-live-dot"></span> <em>' + ch.name + '</em> yayın açtı!</div>' +
+        '<div class="toast-line2">' + ch.category + ' · şimdi başladı</div>' +
+      '</div>' +
+      '<button class="toast-watch" type="button">İzle</button>' +
+      '<button class="toast-close" type="button" aria-label="Bildirimi kapat">' + svgUse("i-close") + '</button>' +
+      '<span class="toast-progress" style="animation-duration:' + TOAST_MS + 'ms"></span>';
+
+    t.querySelector(".toast-close").addEventListener("click", function () { dismissToast(t); });
+    t.querySelector(".toast-watch").addEventListener("click", function () { dismissToast(t); });
+
+    toastRegion.appendChild(t);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { dismissToast(t); }, TOAST_MS);
+  }
+
+  // Demo dongusu: ilk toast 1.6sn sonra, sonra her 9sn'de siradaki
+  setTimeout(function cycle() {
+    showToast(toastQueue[toastIdx % toastQueue.length]);
+    toastIdx += 1;
+    setTimeout(cycle, 9000);
+  }, 1600);
+})();
+</script>
+</body>
+</html>
