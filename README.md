@@ -63,9 +63,6 @@ In JahBrowser, **kick.com tabs are never discarded or frozen** (a `kJahStreamSit
 ### 3. Video never goes black
 If the hardware (GPU) video decoder fails on a driver bug, video **falls back to software decoding and keeps playing** instead of going black (`proprietary_codecs` + `ffmpeg_branding="Chrome"` are compiled together). If the GPU process crashes, Chromium's built‑in safety ladder kicks in — only the **GPU layer**, not the whole browser, drops to a safer mode. The risky flags that would break this ladder (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog`, etc.) are never shipped.
 
-### 4. We fixed our own crashes too
-During development our ad‑blocking layer (Balta) had a bug that killed the renderer process on certain pages; the root cause was found and fixed. That was the real source of the "everything crashes" reports — and it's gone.
-
 **In short:** same Chromium stability + invisible auto‑recovery + stream‑tab protection + intact GPU ladder = **an uninterrupted stream** for the viewer.
 
 ---

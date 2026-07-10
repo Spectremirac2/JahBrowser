@@ -63,9 +63,6 @@ JahBrowser'da **kick.com sekmeleri hiçbir zaman boşaltılmaz/dondurulmaz** (Ch
 ### 3. Video kararmaz
 Donanım (GPU) video çözücüsü bir sürücü hatasıyla düşerse, video **kararmak yerine yazılım çözücüye inip oynamaya devam eder** (`proprietary_codecs` + `ffmpeg_branding="Chrome"` birlikte derlenir). GPU işlemi çökerse Chromium'un yerleşik güvenlik merdiveni devreye girer — **tüm tarayıcı değil, sadece GPU katmanı** daha güvenli moda iner. Bu merdiveni bozan riskli bayraklar (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog` vb.) hiçbir zaman gönderilmez.
 
-### 4. Kendi hatalarımızı da temizledik
-Geliştirme sırasında reklam‑engelleyici katmanımızın (Balta) belirli sayfalarda render işlemini öldüren bir hatası vardı; kök nedeni bulunup düzeltildi. "Her şey çöküyor" şikayetinin asıl kaynağı buydu ve artık yok.
-
 **Özet:** Aynı Chromium sağlamlığı + görünmez otomatik kurtarma + yayın sekmesi koruması + korunmuş GPU merdiveni = izleyici için **kesintisiz yayın.**
 
 ---
