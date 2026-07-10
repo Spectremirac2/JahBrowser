@@ -9,7 +9,7 @@
 - Tamamen otomatik; sen bir şey yapmazsın.
 
 ## Yayın güvencesi
-Balta, **canlı yayını asla bozmaz.** kick.com, twitch.tv ve yayın/emote altyapıları (stream CDN'leri, 7TV, BTTV) her zaman güvenli listededir ve **asla engellenmez.** Yani reklam engelleme açıkken bile yayın, sohbet ve emote'lar sorunsuz çalışır.
+Balta, **canlı yayını asla bozmaz.** kick.com ve yayın/emote altyapıları (stream CDN'leri, 7TV, BTTV) her zaman güvenli listededir ve **asla engellenmez.** Yani reklam engelleme açıkken bile yayın, sohbet ve emote'lar sorunsuz çalışır.
 
 ## Sayaç
 Kaç reklam engellendiğini görebilirsin:

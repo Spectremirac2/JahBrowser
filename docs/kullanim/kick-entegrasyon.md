@@ -1,9 +1,9 @@
-# Kick & Twitch Entegrasyonu
+# Kick Entegrasyonu
 
-JahBrowser, Kick (birincil) ve Twitch (ikincil) için doğrudan tarayıcıya gömülü araçlar sunar. Eklenti kurmana gerek yoktur.
+JahBrowser, Kick için doğrudan tarayıcıya gömülü araçlar sunar. Eklenti kurmana gerek yoktur.
 
 ## Canlı takip akışı
-Yeni sekmede takip ettiğin kanalların **gerçek canlı durumu** görünür — kim yayında, kaç izleyici, hangi kategori. Kick verisi doğrudan Kick'ten, Twitch verisi Twitch'in genel API'sinden çekilir (hesap bağlaman gerekmez). Kanal ekleme için bkz. [Yeni Sekme kılavuzu](yeni-sekme.md).
+Yeni sekmede takip ettiğin kanalların **gerçek canlı durumu** görünür — kim yayında, kaç izleyici, hangi kategori. Veri doğrudan Kick'ten çekilir (hesap bağlaman gerekmez). Kanal ekleme için bkz. [Yeni Sekme kılavuzu](yeni-sekme.md).
 
 ## Kick canlı yan paneli ("Yayınlar")
 Takip ettiğin Kick kanallarını, hangi sayfada olursan ol, yandaki panelden görebilirsin.
@@ -25,4 +25,4 @@ Kendi yayınını yaparken tarayıcıyı "yayın modu"na alabilirsin; araç çub
 
 ## İpuçları
 - Kick her zaman önceliklidir; yeni özellikler önce Kick tarafında çalışır.
-- Twitch kanallarını da takip listene ekleyebilirsin (platform otomatik algılanır).
+- Takip listeni Yeni Sekme ekranından dilediğin gibi düzenleyebilirsin.

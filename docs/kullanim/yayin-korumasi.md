@@ -6,7 +6,7 @@ Normal tarayıcılar (Chrome dahil), bellek tasarrufu için arka plandaki sekmel
 JahBrowser bunu **canlı yayın sekmelerinde asla yapmaz.**
 
 ## Nasıl çalışır?
-- kick.com ve twitch.tv sekmeleri, bellek yönetimi tarafından **hiçbir zaman** dondurulmaz veya boşaltılmaz.
+- kick.com sekmeleri, bellek yönetimi tarafından **hiçbir zaman** dondurulmaz veya boşaltılmaz.
 - Başka sekmelerde çalışsan, çok sayıda sekme açsan bile yayın arka planda **kesintisiz** devam eder.
 - Bu davranış otomatiktir; ayar gerektirmez.
 

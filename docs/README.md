@@ -1,6 +1,6 @@
 # JahBrowser — Kullanım Kılavuzu
 
-JahBrowser, Jaharia topluluğu için tasarlanmış Chromium tabanlı bir Windows tarayıcısıdır. Kick/Twitch izleyicileri ve yayıncıları için doğuştan optimize; Chrome kadar tanıdık, ama yayın ekosistemine özel özelliklerle dolu.
+JahBrowser, Jahrein topluluğu için tasarlanmış Chromium tabanlı bir Windows tarayıcısıdır. Kick izleyicileri ve yayıncıları için doğuştan optimize; Chrome kadar tanıdık, ama yayın ekosistemine özel özelliklerle dolu.
 
 Bu klasör her özelliğin **ne olduğunu** ve **nasıl kullanılacağını** ayrı ayrı anlatır.
 
@@ -9,11 +9,11 @@ Bu klasör her özelliğin **ne olduğunu** ve **nasıl kullanılacağını** ay
 | Kılavuz | Ne anlatır |
 |---|---|
 | [Yeni Sekme ve Kişiselleştirme](kullanim/yeni-sekme.md) | Ana ekran, takip listesi, kanal ekleme paneli, ad/kısayol düzenleme |
-| [Kick & Twitch Entegrasyonu](kullanim/kick-twitch.md) | Canlı takip, yan panel, go-live bildirimi, ON AIR (Yayın Modu) |
+| [Kick Entegrasyonu](kullanim/kick-entegrasyon.md) | Canlı takip, yan panel, go-live bildirimi, ON AIR (Yayın Modu) |
 | [Emote'lar ve Emote Picker](kullanim/emote.md) | 7TV/BTTV emote render, yazarken emote önerisi/tamamlama |
 | [Sohbet Konforu](kullanim/chat-konforu.md) | Kelime vurgusu + bahsedilme sesi/bildirimi |
 | [Balta Reklam Engelleyici](kullanim/balta-adblock.md) | Otomatik reklam/tracker engelleme + günlük sayaç |
-| [Arama Kısayolları](kullanim/arama-kisayollari.md) | Adres çubuğundan `kick`, `yt`, `tw`, `gh`, `wiki` ile direkt arama |
+| [Arama Kısayolları](kullanim/arama-kisayollari.md) | Adres çubuğundan `kick`, `yt`, `gh`, `wiki` ile direkt arama |
 | [Kontrol Merkezi](kullanim/kontrol-merkezi.md) | `chrome://jah-settings` — toggle'lar, Balta sayacı, Güvenli DNS seçici |
 | [Koyu Mod (Force Dark)](kullanim/koyu-mod.md) | Siteleri zorla koyu temaya çevirme |
 | [Dil Seçeneği (Türkçe / English)](kullanim/dil-secenegi.md) | Arayüzü Türkçe veya İngilizce yapma |
@@ -24,8 +24,8 @@ Bu klasör her özelliğin **ne olduğunu** ve **nasıl kullanılacağını** ay
 | [Yayın Sekmesi Koruması](kullanim/yayin-korumasi.md) | Canlı yayın sekmesi neden hiç donmaz |
 
 ## Genel
-- **Dil:** Arayüz baştan sona Türkçe.
+- **Dil:** Arayüz varsayılan İngilizce; Kontrol Merkezi'nden Türkçe'ye geçilebilir (iki dilli).
 - **Gizlilik:** Telemetri her zaman kapalı (opt-in). Güvenli DNS (DoH) açık.
-- **Marka:** Ürün Jaharia topluluğuna adanmıştır.
+- **Marka:** Ürün Jahrein topluluğuna adanmıştır.
 
-> Not: Bu kılavuz yalnızca **çalışan** özellikleri kapsar. Planlanan özellikler için `research/_sentez/ozellik-yol-haritasi.md` ve `CHANGELOG.md`.
+> Not: Bu kılavuz yalnızca **çalışan** özellikleri kapsar. Sürüm geçmişi için `CHANGELOG.md`.

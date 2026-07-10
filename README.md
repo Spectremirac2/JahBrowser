@@ -135,7 +135,7 @@ Summary (see `chromium-patches/README.md` for detail):
 
 ## 📄 License & branding
 
-- Code: **BSD 3‑Clause** — see [LICENSE](LICENSE). Chromium and derived components remain under their own licenses.
+- Code: **BSD 3‑Clause** — see [LICENSE](LICENSE) and [NOTICE](NOTICE.md). Chromium and derived components remain under their own licenses.
 - This is an **independent community project**, not affiliated with or endorsed by Google, Kick, 7TV, BetterTTV, or FrankerFaceZ. All trademarks belong to their respective owners.
 - The "Chrome" name/logo is **not used** (Google trademark).
 

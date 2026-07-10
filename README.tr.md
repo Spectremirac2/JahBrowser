@@ -135,7 +135,7 @@ chromium-patches/
 
 ## 📄 Lisans ve marka
 
-- Kod: **BSD 3‑Clause** — bkz. [LICENSE](LICENSE). Chromium ve türev bileşenler kendi lisansları altındadır.
+- Kod: **BSD 3‑Clause** — bkz. [LICENSE](LICENSE) ve [NOTICE](NOTICE.md). Chromium ve türev bileşenler kendi lisansları altındadır.
 - Bu proje **bağımsız bir topluluk projesidir**; Google, Kick, 7TV, BTTV veya FrankerFaceZ ile resmi bir bağı yoktur. Tüm marka ve logolar sahiplerine aittir.
 - "Chrome" adı/logosu **kullanılmaz** (Google ticari markası).
 

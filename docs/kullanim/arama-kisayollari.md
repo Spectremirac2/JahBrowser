@@ -9,7 +9,6 @@ JahBrowser adres çubuğuna kısa bir anahtar kelime yazıp arama yaptığında 
 |---|---|
 | `kick <sorgu>` | Kick'te arama (kanal/yayın) |
 | `yt <sorgu>` | YouTube'da arama |
-| `tw <sorgu>` | Twitch'te arama |
 | `gh <sorgu>` | GitHub'da arama |
 | `wiki <sorgu>` | Türkçe Vikipedi'de arama |
 
