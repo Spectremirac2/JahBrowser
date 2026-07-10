@@ -10,7 +10,7 @@
 
 ### [![JahBrowser'ı Windows için indir](https://img.shields.io/badge/⬇%20İndir-JahBrowser%20(Windows)-2ecc71?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Setup.exe)
 
-**En güncel sürüm** · Windows 10/11 · [Taşınabilir (.zip)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Portable.zip) · [Tüm sürümler](../../releases/latest)
+**En güncel sürüm** · Windows 10/11 · [Tüm sürümler](../../releases/latest)
 
 [**Neden çökmez?**](#-neden-çökmez-kapanmaz) · [**Neden hızlı?**](#-neden-hızlı) · [**Özellikler**](#-özellikler) · [**Derle**](#-kaynaktan-derleme) · [**Güvenlik**](SECURITY.md)
 
@@ -118,7 +118,7 @@ Ayrıntılı kullanım kılavuzları: [`docs/kullanim/`](docs/kullanim/)
 
 ## ⬇️ İndirme ve doğrulama
 
-1. [**Releases**](../../releases/latest) sayfasından `JahBrowser-Setup.exe` (kurulum) veya `JahBrowser-Portable.zip` (taşınabilir — çıkar, `JahBrowser.bat` ile çalıştır) indir.
+1. [**Releases**](../../releases/latest) sayfasından `JahBrowser-Setup.exe` (kurulum) indir ve çalıştır.
 2. Tarayıcı **varsayılan İngilizce açılır**; Kontrol Merkezi'nden Türkçe'ye geçebilirsin.
 
 ### "Windows bilgisayarınızı korudu" uyarısı görürsen

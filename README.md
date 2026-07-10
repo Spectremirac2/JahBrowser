@@ -10,7 +10,7 @@
 
 ### [![Download JahBrowser for Windows](https://img.shields.io/badge/⬇%20Download-JahBrowser%20for%20Windows-2ecc71?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Setup.exe)
 
-**Latest version** · Windows 10/11 · [Portable (.zip)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Portable.zip) · [All releases](../../releases/latest)
+**Latest version** · Windows 10/11 · [All releases](../../releases/latest)
 
 [**Why doesn't it crash?**](#-why-doesnt-it-crash-or-close) · [**Why is it fast?**](#-why-is-it-fast) · [**Features**](#-features) · [**Build**](#-build-from-source) · [**Security**](SECURITY.md)
 
@@ -118,7 +118,7 @@ Detailed usage guides live in [`docs/kullanim/`](docs/kullanim/).
 
 ## ⬇️ Download & verify
 
-1. From the [**Releases**](../../releases/latest) page, download `JahBrowser-Setup.exe` (installer) or `JahBrowser-Portable.zip` (portable — extract and run `JahBrowser.bat`).
+1. From the [**Releases**](../../releases/latest) page, download `JahBrowser-Setup.exe` (installer) and run it.
 2. The browser **starts in English by default**; you can switch to Turkish from the Control Center.
 
 ### If you see "Windows protected your PC"
