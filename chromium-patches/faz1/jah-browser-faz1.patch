@@ -19548,10 +19548,10 @@ index 0000000000..155b69ea9a
 +#endif  // CHROME_RENDERER_JAH_JAH_BALTA_THROTTLE_H_
 diff --git a/chrome/renderer/jah/jah_emote_content.inc b/chrome/renderer/jah/jah_emote_content.inc
 new file mode 100644
-index 0000000000..5b6763345e
+index 0000000000..b89c35759f
 --- /dev/null
 +++ b/chrome/renderer/jah/jah_emote_content.inc
-@@ -0,0 +1,1380 @@
+@@ -0,0 +1,1424 @@
 +R"JAHEMOTE(
 +// JahBrowser native emote content script — renders 7TV (and later BTTV/FFZ)
 +// emotes inside Kick chat. Kick renders its OWN emotes natively (data-emote-name);
@@ -20403,9 +20403,17 @@ index 0000000000..5b6763345e
 +  }
 +
 +  function findChatInput() {
-+    var root = document.querySelector('[class*="chatroom"]') || document.body;
-+    return root.querySelector(
-+      'textarea, [contenteditable="true"], [contenteditable=""]');
++    // Kick's chat composer is a Lexical contenteditable (div.editor-input /
++    // [data-lexical-editor], contenteditable="true", role="textbox") that lives
++    // OUTSIDE the [class*="chatroom"] message list — so scoping the search to the
++    // chatroom missed it entirely and nothing could be inserted. Search the whole
++    // document, preferring the Lexical editor, then any chat contenteditable, so
++    // this survives Kick DOM changes.
++    return document.querySelector(
++        '[data-lexical-editor="true"], .editor-input[contenteditable], ' +
++        'div[contenteditable="true"][role="textbox"], ' +
++        '[contenteditable="true"], [contenteditable="plaintext-only"], ' +
++        '[contenteditable=""]');
 +  }
 +
 +  // ---- Message history — ↑/↓ recall previously sent messages (terminal
@@ -20527,8 +20535,44 @@ index 0000000000..5b6763345e
 +      var np = start + text.length;
 +      try { input.setSelectionRange(np, np); } catch (e) {}
 +    } else {
-+      try { document.execCommand('insertText', false, text); }
-+      catch (e) { input.textContent = (input.textContent || '') + text; }
++      // Rich contenteditable. If the caret isn't inside the editor (the click
++      // just moved focus), drop it at the end so the insert lands here.
++      var sel = window.getSelection();
++      if (!sel || sel.rangeCount === 0 || !input.contains(sel.anchorNode)) {
++        try {
++          var r = document.createRange();
++          r.selectNodeContents(input);
++          r.collapse(false);
++          if (sel) { sel.removeAllRanges(); sel.addRange(r); }
++        } catch (e) {}
++      }
++      // KRITIK: Kick's composer is a Lexical editor. From our ISOLATED world
++      // document.execCommand('insertText') returns true but Lexical reverts the
++      // mutation, so nothing lands — a synthetic `beforeinput` (which Lexical's
++      // own handler processes) is the only thing that works from a content
++      // script. Prefer it; fall back to execCommand / plain text elsewhere.
++      var lexical = input.hasAttribute('data-lexical-editor') ||
++                    /editor-input/.test(input.className || '');
++      var done = false;
++      if (lexical) {
++        try {
++          input.dispatchEvent(new InputEvent('beforeinput', {
++            inputType: 'insertText', data: text,
++            bubbles: true, cancelable: true }));
++          done = true;
++        } catch (e) {}
++      }
++      if (!done) {
++        try { done = document.execCommand('insertText', false, text); }
++        catch (e) {}
++      }
++      if (!done) {
++        try {
++          input.dispatchEvent(new InputEvent('beforeinput', {
++            inputType: 'insertText', data: text,
++            bubbles: true, cancelable: true }));
++        } catch (e2) { input.textContent = (input.textContent || '') + text; }
++      }
 +    }
 +    input.dispatchEvent(new Event('input', { bubbles: true }));
 +  }
