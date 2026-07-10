@@ -8,7 +8,11 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0A0E13.svg)]()
 [![Chromium](https://img.shields.io/badge/temel-Chromium%20152-2ecc71.svg)]()
 
-[**⬇️ İndir**](../../releases/latest) · [**Neden çökmüyor?**](#-neden-çökmüyor) · [**Özellikler**](#-özellikler) · [**Derle**](#-kaynaktan-derleme) · [**Güvenlik**](SECURITY.md)
+### [![JahBrowser'ı Windows için indir](https://img.shields.io/badge/⬇%20İndir-JahBrowser%20(Windows)-2ecc71?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Setup.exe)
+
+**En güncel sürüm** · Windows 10/11 · [Taşınabilir (.zip)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Portable.zip) · [Tüm sürümler](../../releases/latest)
+
+[**Neden çökmüyor?**](#-neden-çökmüyor) · [**Özellikler**](#-özellikler) · [**Derle**](#-kaynaktan-derleme) · [**Güvenlik**](SECURITY.md)
 
 [**English**](README.md) · **Türkçe**
 

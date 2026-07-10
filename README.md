@@ -8,7 +8,11 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0A0E13.svg)]()
 [![Chromium](https://img.shields.io/badge/based%20on-Chromium%20152-2ecc71.svg)]()
 
-[**⬇️ Download**](../../releases/latest) · [**Why doesn't it crash?**](#-why-doesnt-it-crash) · [**Features**](#-features) · [**Build**](#-build-from-source) · [**Security**](SECURITY.md)
+### [![Download JahBrowser for Windows](https://img.shields.io/badge/⬇%20Download-JahBrowser%20for%20Windows-2ecc71?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Setup.exe)
+
+**Latest version** · Windows 10/11 · [Portable (.zip)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Portable.zip) · [All releases](../../releases/latest)
+
+[**Why doesn't it crash?**](#-why-doesnt-it-crash) · [**Features**](#-features) · [**Build**](#-build-from-source) · [**Security**](SECURITY.md)
 
 **English** · [**Türkçe**](README.tr.md)
 
