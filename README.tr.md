@@ -12,7 +12,7 @@
 
 **En güncel sürüm** · Windows 10/11 · [Taşınabilir (.zip)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Portable.zip) · [Tüm sürümler](../../releases/latest)
 
-[**Neden çökmüyor?**](#-neden-çökmüyor) · [**Özellikler**](#-özellikler) · [**Derle**](#-kaynaktan-derleme) · [**Güvenlik**](SECURITY.md)
+[**Neden çökmez, kapanmaz?**](#-neden-çökmez-kapanmaz) · [**Özellikler**](#-özellikler) · [**Derle**](#-kaynaktan-derleme) · [**Güvenlik**](SECURITY.md)
 
 [**English**](README.md) · **Türkçe**
 
@@ -39,31 +39,47 @@ JahBrowser, **Kick** izleyicileri ve yayıncıları için tasarlanmış, Chromiu
 
 ---
 
-## 🛡️ Neden çökmüyor?
+## 🛡️ Neden çökmez, kapanmaz?
 
-Bu, JahBrowser'ın en önemli farkı. Kısa cevap: **Chromium'un kaya gibi çok‑işlemli çekirdeğini aynen kullanıyoruz, üstüne bir "kurtarma + koruma" katmanı ekliyoruz** — böylece bir çökme yayınınızı hiç kesmez.
+Bu, JahBrowser'ın en önemli farkı. Kısa cevap: **Chromium'un kaya gibi çekirdeğini aynen kullanıyoruz, üstüne tüm‑tarayıcı bir "kurtarma + koruma" katmanı ekliyoruz** — böylece hiçbir şey yayınını kesmez; bir şey ölse bile saniyede geri gelir.
 
-Chrome de aslında sağlamdır; ama bir sekmenin işlemi çöktüğünde sana **"Hay aksi! / Aw, Snap!"** hata sayfasını gösterir ve **elle yenilemeni** bekler. Arka plandaki sekmeyi de bellek baskısı altında **uykuya alır/boşaltır**, geri döndüğünde baştan yükler. JahBrowser bu iki davranışı da değiştirir. İşte tam olarak nasıl:
+Aslında burada **iki ayrı sorun** var ve çoğu "çökme kurtarma" sadece birincisini çözer:
 
-### 1. Otomatik çökme kurtarma (görünmez)
-Bir sekmenin render işlemi gerçekten çökerse, JahBrowser hata sayfasını göstermek yerine sekmeyi **taze bir işlemde otomatik yeniden yükler** — çoğu zaman sen fark etmeden sayfa geri gelir.
+- **Tek bir sekme çöker** → klasik **"Hay aksi! / Aw, Snap!"** sayfası.
+- **Tüm tarayıcı donar, kendini kapatır veya kaybolur** → her şey gider. Uzun yayında asıl canını yakan bu, ve çoğu araç bunu görmezden gelir.
 
-- **Yayın sekmeleri (kick.com) en hızlı kurtulur (~50 ms);** diğer sekmeler ~400 ms.
-- **Sadece gerçek çökmeler** kurtarılır (işlem çökmesi, bellek yetersizliği, bütünlük hatası). Kapattığın ya da bellek tasarrufu için boşaltılan sekmeler yanlışlıkla yeniden yüklenmez.
-- **Sonsuz döngü koruması:** bir sayfa gerçekten bozuksa (üst üste çökerse), kurtarma kademeli yavaşlar (1 sn → 3 sn → 10 sn) ve bir eşikten sonra durur; o zaman normal hata sayfası gösterilir. Böylece bozuk bir site tarayıcıyı kilitlemez.
-- **Form güvenliği:** POST (form gönderimi) sonrası sayfalar otomatik yenilenmez — verini sessizce ikinci kez göndermeyiz.
+JahBrowser ikisini de çözer. İşte her gerçek sorun ve tam olarak nasıl çözüldüğü:
 
-*(Kod: `chrome/browser/jah/jah_crash_recovery_tab_helper.cc` — `WebContentsObserver::PrimaryMainFrameRenderProcessGone` üstüne kurulu, [`chromium-patches/`](chromium-patches/) içinde.)*
+### Sorun: bir sekme çöker ("Hay aksi!")
+**Çözüm — görünmez sekme kurtarma.** Bir sekmenin render işlemi çökerse, JahBrowser hata sayfası göstermek yerine sekmeyi **taze bir işlemde otomatik yeniden yükler** — çoğu zaman sen fark etmeden geri gelir.
+- **Yayın sekmeleri (kick.com) en hızlı kurtulur (~50 ms);** diğerleri ~400 ms.
+- **Sadece gerçek çökmeler** kurtarılır; kapattığın veya bellek için boşaltılan sekmeler yanlışlıkla yeniden yüklenmez.
+- **Sonsuz döngü koruması:** üst üste çöken sayfa kademeli yavaşlar (1 sn → 3 sn → 10 sn) ve sonunda hata sayfası gösterilir — bozuk site tarayıcıyı kilitleyemez.
+- **Form güvenliği:** POST sayfaları sessizce ikinci kez gönderilmez.
 
-### 2. Yayın sekmesi asla uyutulmaz
-Chrome dahil çoğu tarayıcı, RAM kazanmak için arka plandaki sekmeleri **dondurur/boşaltır** — bu, yayını arka planda dinlerken sesin kesilmesine ya da sekmeye dönünce yeniden yüklenmesine yol açar.
+### Sorun: tüm tarayıcı çöker veya kendini kapatır
+**Çözüm — otomatik yeniden başlatma + oturum kurtarma.** *Tüm* tarayıcı süreci ölünce JahBrowser Windows'a **kendini yeniden başlatmasını ve son sekmelerini açmasını** söyler (`--restore-last-session`). Çoğu zaman saniyeler içinde yayınınla birlikte dönersin. Yerleşik bir koruma (Windows 60 sn'den kısa çalışan uygulamayı yeniden başlatmaz) açılış‑çökmesi döngüsünü engeller.
 
-JahBrowser'da **kick.com sekmeleri hiçbir zaman boşaltılmaz/dondurulmaz** (Chromium'un discard/freeze motoruna `kJahStreamSite` gerekçesi eklendi). Bellek Tasarrufu (Memory Saver) varsayılan **açık** — ama yalnızca yayın‑dışı sekmelere uygulanır. Sonuç: kaç sekme açarsan aç, yayın arka planda kesintisiz devam eder.
+### Sorun: tarayıcı donar / yanıt vermez
+**Çözüm — aynı yeniden başlatma yolu donmayı da kapsar.** UI iş parçacığı donup Windows "yanıt vermiyor" penceresini kapatırsa, tarayıcı yine önceki oturumuna geri açılır. Açık sekmelerin sürekli kaydedilir, neredeyse hiçbir şey kaybolmaz.
 
-### 3. Video kararmaz
-Donanım (GPU) video çözücüsü bir sürücü hatasıyla düşerse, video **kararmak yerine yazılım çözücüye inip oynamaya devam eder** (`proprietary_codecs` + `ffmpeg_branding="Chrome"` birlikte derlenir). GPU işlemi çökerse Chromium'un yerleşik güvenlik merdiveni devreye girer — **tüm tarayıcı değil, sadece GPU katmanı** daha güvenli moda iner. Bu merdiveni bozan riskli bayraklar (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog` vb.) hiçbir zaman gönderilmez.
+### Sorun: video donar veya kararır (GPU / sürücü)
+İzlerken donmanın **1 numaralı** sebebi — sorunlu ekran kartı sürücüsü. **Çözüm, üç katman:**
+1. **Yazılım fallback** — donanım video çözücüsü düşerse video **kararmak yerine yazılım çözücüye inip oynamaya devam eder** (`proprietary_codecs` + `ffmpeg_branding="Chrome"` birlikte derlenir).
+2. **Kendini iyileştiren güvenli‑GPU merdiveni** — GPU tekrar tekrar çökerse JahBrowser bunu **o makineye özel hatırlar** ve sonraki açılışta kademeli güvenli video yoluna geçer (DirectComposition kapalı → donanım video çözme kapalı). Sürücün düzelince kademeli olarak tam hızlandırmaya döner.
+3. **Tek‑tık Güvenli Video Modu** — Kontrol Merkezi'nde; video sorun çıkarırsa güvenli yolu anında zorlar.
 
-**Özet:** Aynı Chromium sağlamlığı + görünmez otomatik kurtarma + yayın sekmesi koruması + korunmuş GPU merdiveni = izleyici için **kesintisiz yayın.**
+Chromium'un GPU güvenlik merdivenini **bozan** riskli bayraklar (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog` …) **hiçbir zaman** gönderilmez.
+
+### Sorun: uzun oturumlar tüm RAM'i yer (bellek tükenmesi)
+**Çözüm — yayını koruyan bellek yönetimi.** Boşta duran arka plan sekmeleri belleğini boşaltır (Memory Saver, varsayılan açık), ve **Uzun Yayın Modu** saatlerce açık oturumlarda belleği agresif yönetir — ama **yayın sekmeleri (kick.com) asla boşaltılmaz/dondurulmaz** (`kJahStreamSite`). Kaç sekme açarsan aç, yayın oynamaya devam eder.
+
+### Bonus: çökmelerden öğrenir
+**İsteğe bağlı, yalnızca yerel** bir çökme günlüğü (varsayılan kapalı, KVKK‑dostu, hiçbir şey gönderilmez) çökmenin ardındaki GPU/sürücüyü kaydeder; böylece donmaya yol açan donanım kombinasyonları gerçekten çözülebilir.
+
+**Özet:** Aynı Chromium sağlamlığı + görünmez sekme kurtarma + tüm‑tarayıcı otomatik yeniden başlatma + kendini iyileştiren GPU yolu + yayın‑korumalı bellek = **yayının hiç kesilmez, tarayıcı ölse bile hemen geri gelir.**
+
+> **Dürüst not:** Bu donmaların çoğunun kaynağı senin GPU sürücün / donanımın / Windows'un — hiçbir tarayıcı bozuk bir sürücünün hata yapmasını *engelleyemez*. JahBrowser'ın işi: tetikleyicileri azaltmak, görünmez kurtarmak, ölürse saniyede geri gelmek ve sana kolay kaçış kapıları vermek.
 
 ---
 
@@ -71,7 +87,7 @@ Donanım (GPU) video çözücüsü bir sürücü hatasıyla düşerse, video **k
 
 | Alan | Özellik |
 |---|---|
-| **Stabilite** | Otomatik çökme kurtarma · yayın sekmesi keep‑alive · video yazılım‑fallback · oturum geri‑yükleme |
+| **Stabilite** | Tüm‑tarayıcı otomatik yeniden başlatma (çökme + donma) · sekme çökme kurtarma · kendini iyileştiren güvenli‑GPU merdiveni + Güvenli Video Modu · yayın sekmesi keep‑alive · Uzun Yayın Modu · opt‑in yerel çökme günlüğü |
 | **Yayın** | Canlı yan panel (gerçek Kick verisi + avatarlar) · çoklu yayın grid'i · go‑live masaüstü bildirimi · Tiyatro (tam ekran) modu |
 | **Chat / Emote** | Eklentisiz 7TV/BTTV/FFZ/Kick emote render · emote picker + menü · keyword highlight + mention sesi · mesaj geçmişi |
 | **Kick Mod araçları** | Native mod paneli (sohbetçi kadrosu + user‑card · link/spam/flood/CAPS bayrakları · silme tespiti) — %100 client‑side |

@@ -12,7 +12,7 @@
 
 **Latest version** · Windows 10/11 · [Portable (.zip)](https://github.com/Spectremirac2/JahBrowser/releases/latest/download/JahBrowser-Portable.zip) · [All releases](../../releases/latest)
 
-[**Why doesn't it crash?**](#-why-doesnt-it-crash) · [**Features**](#-features) · [**Build**](#-build-from-source) · [**Security**](SECURITY.md)
+[**Why doesn't it crash or close?**](#-why-doesnt-it-crash-or-close) · [**Features**](#-features) · [**Build**](#-build-from-source) · [**Security**](SECURITY.md)
 
 **English** · [**Türkçe**](README.tr.md)
 
@@ -39,31 +39,47 @@ JahBrowser is an open‑source, Chromium‑152‑based Windows browser designed 
 
 ---
 
-## 🛡️ Why doesn't it crash?
+## 🛡️ Why doesn't it crash or close?
 
-This is JahBrowser's single most important difference. The short answer: **it keeps Chromium's rock‑solid multi‑process core and adds a recovery + protection layer** — so a crash never interrupts your stream.
+This is JahBrowser's single most important difference. The short answer: **it keeps Chromium's rock‑solid multi‑process core and adds a whole‑browser recovery + protection layer** — so nothing interrupts your stream, and if something does die it comes right back.
 
-Chrome is robust too, but when a tab's process crashes it shows you the **"Aw, Snap!"** error page and waits for you to **reload manually**. It also **discards/freezes** background tabs under memory pressure, reloading them from scratch when you return. JahBrowser changes both behaviors. Here is exactly how:
+There are two *different* problems here, and most "crash recovery" only handles the first:
 
-### 1. Invisible automatic crash recovery
-If a tab's renderer process actually crashes, JahBrowser **reloads it automatically in a fresh process** instead of showing an error page — usually the page comes back before you even notice.
+- **A single tab crashes** → the classic **"Aw, Snap!"** page.
+- **The whole browser freezes, closes itself, or vanishes** → everything is gone. This is the one that hurts during a long stream, and the one most tools ignore.
 
+JahBrowser handles both. Here is each real problem and exactly how it's solved:
+
+### Problem: a tab crashes ("Aw, Snap!")
+**Solution — invisible tab recovery.** If a tab's renderer process crashes, JahBrowser **reloads it automatically in a fresh process** instead of showing an error page — usually it's back before you notice.
 - **Stream tabs (kick.com) recover fastest (~50 ms);** other tabs ~400 ms.
-- **Only genuine crashes** are recovered (process crash, out‑of‑memory, integrity failure). Tabs you closed, or ones the browser evicted to save memory, are never reloaded by mistake.
-- **Infinite‑loop protection:** if a page is genuinely broken (keeps crashing), recovery backs off progressively (1 s → 3 s → 10 s) and stops after a threshold, then shows the normal error page — so a broken site can't lock up the browser.
-- **Form safety:** pages loaded via POST are never auto‑reloaded — we never silently resubmit your data.
+- **Only genuine crashes** are recovered; tabs you closed or that were evicted to save memory are never reloaded by mistake.
+- **Infinite‑loop protection:** a page that keeps crashing backs off (1 s → 3 s → 10 s) and eventually shows the error page — a broken site can't lock the browser.
+- **Form safety:** POST pages are never silently re‑submitted.
 
-*(Code: `chrome/browser/jah/jah_crash_recovery_tab_helper.cc` — built on `WebContentsObserver::PrimaryMainFrameRenderProcessGone`, shipped in [`chromium-patches/`](chromium-patches/).)*
+### Problem: the whole browser crashes or closes itself
+**Solution — automatic relaunch + session restore.** When the *entire* browser process dies, JahBrowser tells Windows to **relaunch it and reopen your last tabs** (`--restore-last-session`). Usually you're back within seconds, with your streams. A built‑in guard (Windows won't relaunch an app that ran < 60 s) prevents a start‑up‑crash loop.
 
-### 2. Stream tabs are never put to sleep
-Most browsers (Chrome included) **freeze/discard** background tabs to reclaim RAM — which is why a stream can go silent while you're on another tab, or reload when you come back.
+### Problem: the browser freezes / stops responding
+**Solution — the same relaunch path covers hangs.** If the UI thread hangs and Windows kills the "not responding" window, it is relaunched into your previous session too. Your open tabs are continuously saved, so almost nothing is lost.
 
-In JahBrowser, **kick.com tabs are never discarded or frozen** (a `kJahStreamSite` reason was added to Chromium's discard/freeze engine). Memory Saver is on by default — but it only applies to non‑stream tabs. The result: no matter how many tabs you open, your stream keeps playing in the background.
+### Problem: video freezes or goes black (GPU / driver)
+This is the #1 cause of freezes while watching — a flaky graphics driver. **Solution, three layers:**
+1. **Software fallback** — if hardware video decode fails, video drops to software decoding and **keeps playing instead of going black** (`proprietary_codecs` + `ffmpeg_branding="Chrome"` compiled together).
+2. **Self‑healing safe‑GPU ladder** — if the GPU keeps crashing, JahBrowser **remembers it for that machine** and starts up in a progressively safer video path next launch (DirectComposition off → hardware video decode off). When your driver is fixed, it gradually restores full acceleration.
+3. **One‑click Safe Video Mode** — in Control Center; forces the safe path immediately if video misbehaves.
 
-### 3. Video never goes black
-If the hardware (GPU) video decoder fails on a driver bug, video **falls back to software decoding and keeps playing** instead of going black (`proprietary_codecs` + `ffmpeg_branding="Chrome"` are compiled together). If the GPU process crashes, Chromium's built‑in safety ladder kicks in — only the **GPU layer**, not the whole browser, drops to a safer mode. The risky flags that would break this ladder (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog`, etc.) are never shipped.
+The risky flags that would *break* Chromium's GPU safety ladder (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog`, …) are **never** shipped.
 
-**In short:** same Chromium stability + invisible auto‑recovery + stream‑tab protection + intact GPU ladder = **an uninterrupted stream** for the viewer.
+### Problem: long sessions eat all your RAM (out‑of‑memory)
+**Solution — memory management that protects the stream.** Idle background tabs free their memory (Memory Saver, on by default), and **Long Stream Mode** manages memory aggressively for multi‑hour sessions — but **stream tabs (kick.com) are never discarded or frozen** (`kJahStreamSite`). No matter how many tabs you open, the stream keeps playing.
+
+### Bonus: it learns from crashes
+An **opt‑in, local‑only** crash log (off by default, KVKK‑friendly, nothing uploaded) records the GPU/driver behind a crash, so the hardware combos that cause freezes can actually be fixed.
+
+**In short:** same Chromium stability + invisible tab recovery + whole‑browser auto‑relaunch + a self‑healing GPU path + stream‑protected memory = **your stream is never interrupted, and if the browser ever dies it comes straight back.**
+
+> **Honest note:** many of these freezes are caused by your GPU driver / hardware / Windows itself — no browser can *prevent* a broken driver from misbehaving. JahBrowser's job is to reduce the triggers, recover invisibly, come back in seconds if it dies, and give you easy escape hatches.
 
 ---
 
@@ -71,7 +87,7 @@ If the hardware (GPU) video decoder fails on a driver bug, video **falls back to
 
 | Area | Feature |
 |---|---|
-| **Stability** | Automatic crash recovery · stream‑tab keep‑alive · software video fallback · session restore |
+| **Stability** | Whole‑browser auto‑relaunch (crash + hang) · tab crash recovery · self‑healing safe‑GPU ladder + Safe Video Mode · stream‑tab keep‑alive · Long Stream Mode · opt‑in local crash log |
 | **Streaming** | Live side panel (real Kick data + avatars) · multistream grid · go‑live desktop notification · Theater (fullscreen) mode |
 | **Chat / Emotes** | No‑plugin 7TV/BTTV/FFZ/Kick emote rendering · emote picker + menu · keyword highlight + mention sound · message history |
 | **Kick mod tools** | Native mod panel (chatter roster + user‑card · link/spam/flood/CAPS flags · deletion detection) — 100% client‑side |
