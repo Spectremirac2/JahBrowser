@@ -19548,10 +19548,10 @@ index 0000000000..155b69ea9a
 +#endif  // CHROME_RENDERER_JAH_JAH_BALTA_THROTTLE_H_
 diff --git a/chrome/renderer/jah/jah_emote_content.inc b/chrome/renderer/jah/jah_emote_content.inc
 new file mode 100644
-index 0000000000..b89c35759f
+index 0000000000..928fa3322f
 --- /dev/null
 +++ b/chrome/renderer/jah/jah_emote_content.inc
-@@ -0,0 +1,1424 @@
+@@ -0,0 +1,1571 @@
 +R"JAHEMOTE(
 +// JahBrowser native emote content script — renders 7TV (and later BTTV/FFZ)
 +// emotes inside Kick chat. Kick renders its OWN emotes natively (data-emote-name);
@@ -19815,7 +19815,9 @@ index 0000000000..b89c35759f
 +    }
 +  }
 +
-+  function buildChatPanel() {
++  // mount: when provided, the settings are rendered in-flow into that Jah-hub
++  // tab pane instead of a standalone floating gear + panel (legacy path).
++  function buildChatPanel(mount) {
 +    var lang = (navigator.language || 'tr').toLowerCase().indexOf('en') === 0
 +        ? 'en' : 'tr';
 +    var t = lang === 'en'
@@ -19823,24 +19825,32 @@ index 0000000000..b89c35759f
 +          sound: 'Mention sound', notify: 'Desktop notification', ts: 'Timestamps', save: 'Save' }
 +      : { g: 'Sohbet', title: 'Vurgu kelimeleri', hint: 'Virgülle ayır. İçeren mesajlar vurgulanır.',
 +          sound: 'Bahsedilme sesi', notify: 'Masaüstü bildirimi', ts: 'Zaman damgası', save: 'Kaydet' };
-+    var gear = document.createElement('button');
-+    gear.type = 'button';
-+    gear.id = 'jahChatGear';
-+    gear.className = 'jah-ui-toggle';
-+    gear.title = t.title;
-+    gear.textContent = '⚙ ' + t.g;
-+    gear.style.cssText =
-+      'position:fixed;z-index:2147483646;right:16px;bottom:16px;' +
-+      'background:#191B1F;color:#F2F2F0;border:1px solid #33383F;' +
-+      'border-radius:999px;padding:8px 14px;font:600 13px "Segoe UI",' +
-+      'system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.5);';
++    var gear = null;
++    if (!mount) {
++      gear = document.createElement('button');
++      gear.type = 'button';
++      gear.id = 'jahChatGear';
++      gear.className = 'jah-ui-toggle';
++      gear.title = t.title;
++      gear.textContent = '⚙ ' + t.g;
++      gear.style.cssText =
++        'position:fixed;z-index:2147483646;right:16px;bottom:16px;' +
++        'background:#191B1F;color:#F2F2F0;border:1px solid #33383F;' +
++        'border-radius:999px;padding:8px 14px;font:600 13px "Segoe UI",' +
++        'system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.5);';
++    }
 +    var panel = document.createElement('div');
-+    panel.className = 'jah-ui-toggle';
-+    panel.style.cssText =
-+      'position:fixed;z-index:2147483646;right:16px;bottom:58px;display:none;' +
-+      'width:280px;background:#191B1F;color:#F2F2F0;border:1px solid #33383F;' +
-+      'border-radius:12px;padding:14px;font:14px "Segoe UI",system-ui,sans-serif;' +
-+      'box-shadow:0 8px 28px rgba(0,0,0,.6);';
++    if (mount) {
++      panel.style.cssText =
++        'padding:14px;color:#F2F2F0;font:14px "Segoe UI",system-ui,sans-serif;';
++    } else {
++      panel.className = 'jah-ui-toggle';
++      panel.style.cssText =
++        'position:fixed;z-index:2147483646;right:16px;bottom:58px;display:none;' +
++        'width:280px;background:#191B1F;color:#F2F2F0;border:1px solid #33383F;' +
++        'border-radius:12px;padding:14px;font:14px "Segoe UI",system-ui,sans-serif;' +
++        'box-shadow:0 8px 28px rgba(0,0,0,.6);';
++    }
 +    var ta = document.createElement('textarea');
 +    ta.value = chatCfg.keywords.join(', ');
 +    ta.placeholder = 'jahrein, klip, önemli';
@@ -19943,7 +19953,7 @@ index 0000000000..b89c35759f
 +        el.__jahHlDone = false; el.classList.remove('jah-hl');
 +      });
 +      scanAll();
-+      panel.style.display = 'none';
++      if (!mount) { panel.style.display = 'none'; }
 +    });
 +    panel.appendChild(title);
 +    panel.appendChild(hint);
@@ -19957,6 +19967,10 @@ index 0000000000..b89c35759f
 +    panel.appendChild(globB);
 +    panel.appendChild(sizeWrap);
 +    panel.appendChild(save);
++    if (mount) {
++      mount.appendChild(panel);
++      return;
++    }
 +    gear.addEventListener('click', function () {
 +      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 +    });
@@ -20117,19 +20131,9 @@ index 0000000000..b89c35759f
 +    if (window.__jahChatStarted) return;
 +    window.__jahChatStarted = true;
 +    chatCfg = readChatCfg();
-+    jahEnsureToggleCss();
-+    var attach = function () {
-+      if (document.body && !document.getElementById('jahChatGear')) {
-+        buildChatPanel();
-+        buildHeatWidget();
-+        buildUiToggle();
-+        // Butonlar kurulduktan sonra kayitli gizli/goster durumunu uygula.
-+        setTimeout(function () { jahApplyUiHidden(jahUiHidden()); }, 200);
-+        return true;
-+      }
-+      return false;
-+    };
-+    if (!attach()) setTimeout(attach, 1500);
++    // The chat-comfort settings now live in the Jah hub's "Sohbet" tab; building
++    // the hub mounts them (plus the emote + mod tabs) under one header button.
++    startJahHub();
 +  }
 +
 +  function chatRoot() {
@@ -20577,28 +20581,37 @@ index 0000000000..b89c35759f
 +    input.dispatchEvent(new Event('input', { bubbles: true }));
 +  }
 +
-+  function buildEmoteMenu() {
++  // mount: when provided, the emote search + grid is rendered in-flow into that
++  // Jah-hub tab pane instead of a standalone floating 😀 button + panel.
++  function buildEmoteMenu(mount) {
 +    var lang = (navigator.language || 'tr').toLowerCase().indexOf('en') === 0
 +        ? 'en' : 'tr';
-+    var btn = document.createElement('button');
-+    btn.type = 'button';
-+    btn.id = 'jahEmoteMenuBtn';
-+    btn.className = 'jah-ui-toggle';
-+    btn.textContent = '😀';
-+    btn.title = lang === 'en' ? 'Emotes' : 'Emote menüsü';
-+    btn.style.cssText =
-+      'position:fixed;z-index:2147483646;right:16px;bottom:96px;' +
-+      'width:40px;height:40px;border-radius:999px;background:#191B1F;' +
-+      'color:#F2F2F0;border:1px solid #33383F;font-size:18px;cursor:pointer;' +
-+      'box-shadow:0 4px 14px rgba(0,0,0,.5);';
++    var btn = null;
++    if (!mount) {
++      btn = document.createElement('button');
++      btn.type = 'button';
++      btn.id = 'jahEmoteMenuBtn';
++      btn.className = 'jah-ui-toggle';
++      btn.textContent = '😀';
++      btn.title = lang === 'en' ? 'Emotes' : 'Emote menüsü';
++      btn.style.cssText =
++        'position:fixed;z-index:2147483646;right:16px;bottom:96px;' +
++        'width:40px;height:40px;border-radius:999px;background:#191B1F;' +
++        'color:#F2F2F0;border:1px solid #33383F;font-size:18px;cursor:pointer;' +
++        'box-shadow:0 4px 14px rgba(0,0,0,.5);';
++    }
 +    var panel = document.createElement('div');
 +    panel.id = 'jahEmoteMenuPanel';
-+    panel.className = 'jah-ui-toggle';
-+    panel.style.cssText =
-+      'position:fixed;z-index:2147483646;right:16px;bottom:142px;display:none;' +
-+      'width:308px;max-height:340px;overflow-y:auto;background:#191B1F;' +
-+      'border:1px solid #33383F;border-radius:12px;padding:8px;' +
-+      'box-shadow:0 8px 28px rgba(0,0,0,.6);';
++    if (mount) {
++      panel.style.cssText = 'padding:8px;max-height:44vh;overflow-y:auto;';
++    } else {
++      panel.className = 'jah-ui-toggle';
++      panel.style.cssText =
++        'position:fixed;z-index:2147483646;right:16px;bottom:142px;display:none;' +
++        'width:308px;max-height:340px;overflow-y:auto;background:#191B1F;' +
++        'border:1px solid #33383F;border-radius:12px;padding:8px;' +
++        'box-shadow:0 8px 28px rgba(0,0,0,.6);';
++    }
 +    var search = document.createElement('input');
 +    search.type = 'text';
 +    search.placeholder = lang === 'en' ? 'Search emote…' : 'Emote ara…';
@@ -20666,6 +20679,11 @@ index 0000000000..b89c35759f
 +    };
 +    panel.appendChild(search);
 +    panel.appendChild(grid);
++    if (mount) {
++      mount.__onShow = function () { renderGrid(search.value || ''); };
++      mount.appendChild(panel);
++      return;
++    }
 +    btn.addEventListener('click', function () {
 +      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 +    });
@@ -20677,17 +20695,127 @@ index 0000000000..b89c35759f
 +    }
 +  }
 +
-+  function startEmoteMenu() {
-+    if (!emotes.size) return;
-+    if (window.__jahEmoteMenuStarted) {
-+      // Menu already built (SPA channel change): re-render its grid with the new
-+      // channel's emote set rather than appending a duplicate button/panel.
++  // ===================================================================
++  // Jah hub — ONE button, injected into Kick's own chat header ("Chat"),
++  // that opens ONE panel with tabs [Emote | Mod | Sohbet]. Replaces the old
++  // stack of separate floating buttons (😀 emote, 🛡️ mod, ⚙ chat, 📊) that
++  // collided with Kick's native chat controls.
++  // ===================================================================
++  function jahChatHeaderEl() {
++    var spans = document.querySelectorAll('span');
++    for (var i = 0; i < spans.length; i++) {
++      var s = spans[i];
++      if ((s.textContent || '').trim() !== 'Chat') continue;
++      var r = s.getBoundingClientRect();
++      if (r.top < 320 && r.right > 900 && r.width > 0) {
++        return s.parentElement;
++      }
++    }
++    return null;
++  }
++
++  function buildJahHub() {
++    if (window.__jahHubBuilt) return true;
++    var header = jahChatHeaderEl();
++    if (!header || document.getElementById('jahHubBtn')) {
++      return !!document.getElementById('jahHubBtn');
++    }
++    window.__jahHubBuilt = true;
++    var en = (navigator.language || 'tr').toLowerCase().indexOf('en') === 0;
++
++    var btn = document.createElement('button');
++    btn.type = 'button'; btn.id = 'jahHubBtn'; btn.textContent = 'J';
++    btn.title = en ? 'JahBrowser tools' : 'JahBrowser araçları';
++    btn.style.cssText =
++      'z-index:30;margin-left:6px;width:26px;height:26px;flex:0 0 auto;' +
++      'border-radius:7px;background:#53FC18;color:#0B0E0F;border:none;' +
++      'cursor:pointer;font:800 14px "Segoe UI",system-ui,sans-serif;line-height:1;';
++    header.appendChild(btn);
++
++    var panel = document.createElement('div');
++    panel.id = 'jahHubPanel';
++    panel.style.cssText =
++      'position:fixed;z-index:2147483646;display:none;flex-direction:column;' +
++      'width:340px;max-height:64vh;overflow:hidden;background:#14161A;' +
++      'color:#E4E8ED;border:1px solid #2A2F37;border-radius:12px;' +
++      'box-shadow:0 12px 40px rgba(0,0,0,.6);' +
++      'font:13px/1.4 "Segoe UI",system-ui,sans-serif;';
++    var tabbar = document.createElement('div');
++    tabbar.style.cssText =
++      'display:flex;border-bottom:1px solid #2A2F37;flex:0 0 auto;';
++    var content = document.createElement('div');
++    content.style.cssText = 'flex:1 1 auto;overflow-y:auto;';
++    var panes = {
++      emote: document.createElement('div'),
++      mod: document.createElement('div'),
++      sohbet: document.createElement('div')
++    };
++    for (var k in panes) { panes[k].style.display = 'none'; content.appendChild(panes[k]); }
++    try { buildEmoteMenu(panes.emote); } catch (e) {}
++    try { buildModPanel(panes.mod); } catch (e) {}
++    try { buildChatPanel(panes.sohbet); } catch (e) {}
++
++    var active = 'emote';
++    var tabs = {};
++    function setTab(id) {
++      active = id;
++      for (var kk in panes) {
++        panes[kk].style.display = kk === id ? 'block' : 'none';
++        if (tabs[kk]) tabs[kk].style.color = kk === id ? '#53FC18' : '#8A94A0';
++      }
++      if (panes[id] && panes[id].__onShow) { try { panes[id].__onShow(); } catch (e) {} }
++    }
++    function mkTab(id, label) {
++      var b = document.createElement('button');
++      b.type = 'button'; b.textContent = label;
++      b.style.cssText = 'flex:1;padding:9px 6px;background:none;border:none;' +
++        'cursor:pointer;font:600 12px inherit;color:#8A94A0;';
++      b.addEventListener('click', function () { setTab(id); });
++      tabs[id] = b; tabbar.appendChild(b);
++    }
++    mkTab('emote', en ? 'Emotes' : 'Emote');
++    mkTab('mod', 'Mod');
++    mkTab('sohbet', en ? 'Chat' : 'Sohbet');
++    panel.appendChild(tabbar); panel.appendChild(content);
++    (document.body || document.documentElement).appendChild(panel);
++
++    function position() {
++      var h = jahChatHeaderEl();
++      var r = h ? h.getBoundingClientRect() : btn.getBoundingClientRect();
++      panel.style.top = Math.round(r.bottom + 4) + 'px';
++      panel.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
++    }
++    btn.addEventListener('click', function (e) {
++      e.stopPropagation();
++      if (panel.style.display === 'none') {
++        position(); panel.style.display = 'flex'; setTab(active);
++      } else {
++        panel.style.display = 'none';
++      }
++    });
++    document.addEventListener('mousedown', function (e) {
++      if (panel.style.display !== 'none' && !panel.contains(e.target) &&
++          e.target !== btn) {
++        panel.style.display = 'none';
++      }
++    }, true);
++    return true;
++  }
++
++  // Build the hub once Kick's chat header exists (SPA: retry). Idempotent.
++  function startJahHub() {
++    if (window.__jahHubBuilt) {
 +      if (window.__jahRenderEmoteGrid) window.__jahRenderEmoteGrid();
 +      return;
 +    }
-+    window.__jahEmoteMenuStarted = true;
-+    if (document.body) buildEmoteMenu();
-+    else setTimeout(function () { if (document.body) buildEmoteMenu(); }, 1500);
++    if (!buildJahHub()) { setTimeout(startJahHub, 1500); }
++  }
++
++  function startEmoteMenu() {
++    // Emotes just finished loading — make sure the hub exists and refresh the
++    // emote grid with this channel's set. The hub hosts the emote tab now.
++    startJahHub();
++    if (window.__jahRenderEmoteGrid) window.__jahRenderEmoteGrid();
 +  }
 +
 +  // ===================================================================
@@ -20744,10 +20872,10 @@ index 0000000000..b89c35759f
 +  function jahModProcess(root) {
 +    if (root.__jahMod && !root.__jahDirty) { return; }
 +    root.__jahMod = true;
-+    // Panel yalnizca gercek chat basladiginda + kick.com'da belirsin (homepage'de degil).
-+    if (location.hostname.indexOf('kick.com') >= 0 &&
-+        !document.getElementById('jahModBtn')) {
-+      try { buildModPanel(); } catch (e) {}
++    // Mod tools live in the Jah hub's "Mod" tab now; ensure the hub is built
++    // once real chat starts on kick.com (not on the homepage).
++    if (location.hostname.indexOf('kick.com') >= 0 && !window.__jahHubBuilt) {
++      try { startJahHub(); } catch (e) {}
 +    }
 +    var raw = (root.innerText || '').replace(/\s+/g, ' ').trim();
 +    // Silinen mesaj tespiti (Mod Logger): Kick silinen mesaji soluklastirir +
@@ -20809,24 +20937,35 @@ index 0000000000..b89c35759f
 +    if (s < 3600) { return Math.round(s / 60) + 'dk'; }
 +    return Math.round(s / 3600) + 'sa';
 +  }
-+  function buildModPanel() {
-+    if (document.getElementById('jahModBtn')) { return; }
++  // mount: when provided, the mod tools render in-flow into that Jah-hub tab
++  // pane instead of a standalone floating 🛡️ button + panel.
++  function buildModPanel(mount) {
++    if (!mount && document.getElementById('jahModBtn')) { return; }
 +    var en = (navigator.language || 'tr').toLowerCase().indexOf('en') === 0;
-+    var btn = document.createElement('button');
-+    btn.type = 'button'; btn.id = 'jahModBtn'; btn.textContent = '🛡️';
-+    btn.title = en ? 'Jah Moderation Tools' : 'Jah Moderasyon Araçları';
-+    btn.style.cssText =
-+      'position:fixed;z-index:2147483646;right:64px;bottom:16px;width:40px;' +
-+      'height:40px;border-radius:50%;background:#191B1F;color:#fff;' +
-+      'border:1px solid #33383F;cursor:pointer;font-size:16px;' +
-+      'box-shadow:0 4px 14px rgba(0,0,0,.5);';
++    var btn = null;
++    if (!mount) {
++      btn = document.createElement('button');
++      btn.type = 'button'; btn.id = 'jahModBtn'; btn.textContent = '🛡️';
++      btn.title = en ? 'Jah Moderation Tools' : 'Jah Moderasyon Araçları';
++      btn.style.cssText =
++        'position:fixed;z-index:2147483646;right:64px;bottom:16px;width:40px;' +
++        'height:40px;border-radius:50%;background:#191B1F;color:#fff;' +
++        'border:1px solid #33383F;cursor:pointer;font-size:16px;' +
++        'box-shadow:0 4px 14px rgba(0,0,0,.5);';
++    }
 +    var panel = document.createElement('div');
-+    panel.style.cssText =
-+      'position:fixed;z-index:2147483646;right:16px;bottom:64px;display:none;' +
-+      'flex-direction:column;width:330px;max-height:60vh;background:#14161A;' +
-+      'color:#E4E8ED;border:1px solid #2A2F37;border-radius:12px;overflow:hidden;' +
-+      'box-shadow:0 12px 40px rgba(0,0,0,.6);' +
-+      'font:13px/1.4 "Segoe UI",system-ui,sans-serif;';
++    if (mount) {
++      panel.style.cssText =
++        'display:flex;flex-direction:column;max-height:46vh;' +
++        'color:#E4E8ED;font:13px/1.4 "Segoe UI",system-ui,sans-serif;';
++    } else {
++      panel.style.cssText =
++        'position:fixed;z-index:2147483646;right:16px;bottom:64px;display:none;' +
++        'flex-direction:column;width:330px;max-height:60vh;background:#14161A;' +
++        'color:#E4E8ED;border:1px solid #2A2F37;border-radius:12px;overflow:hidden;' +
++        'box-shadow:0 12px 40px rgba(0,0,0,.6);' +
++        'font:13px/1.4 "Segoe UI",system-ui,sans-serif;';
++    }
 +    // Tabs
 +    var tabs = document.createElement('div');
 +    tabs.style.cssText = 'display:flex;border-bottom:1px solid #2A2F37;flex:0 0 auto;';
@@ -20949,15 +21088,23 @@ index 0000000000..b89c35759f
 +            (function (uu) { return function () { showCard(uu); }; })(u)));
 +      }
 +    }
++    // Re-render only while actually visible (offsetParent is null when the
++    // panel — or, in the hub, its tab pane — is hidden).
 +    jahModRefresh = function () {
-+      if (panel.style.display !== 'none') { render(); }
++      if (panel.offsetParent !== null) { render(); }
 +    };
++    panel.appendChild(tabs); panel.appendChild(search);
++    panel.appendChild(body); panel.appendChild(foot);
++    if (mount) {
++      mount.__onShow = render;   // hub re-renders on tab activate
++      mount.appendChild(panel);
++      render();
++      return;
++    }
 +    btn.addEventListener('click', function () {
 +      panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
 +      if (panel.style.display !== 'none') { render(); }
 +    });
-+    panel.appendChild(tabs); panel.appendChild(search);
-+    panel.appendChild(body); panel.appendChild(foot);
 +    (document.body || document.documentElement).appendChild(btn);
 +    (document.body || document.documentElement).appendChild(panel);
 +  }
