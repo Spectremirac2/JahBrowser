@@ -10508,10 +10508,10 @@ index 0000000000..cc42c7539d
 +#endif  // CHROME_BROWSER_UI_WEBUI_JAH_HOME_JAH_HOME_MESSAGE_HANDLER_H_
 diff --git a/chrome/browser/ui/webui/jah_home/jah_home_ui.cc b/chrome/browser/ui/webui/jah_home/jah_home_ui.cc
 new file mode 100644
-index 0000000000..cf78a661b2
+index 0000000000..b95dc8b537
 --- /dev/null
 +++ b/chrome/browser/ui/webui/jah_home/jah_home_ui.cc
-@@ -0,0 +1,721 @@
+@@ -0,0 +1,799 @@
 +// Copyright 2026 The JahBrowser Authors
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -10532,6 +10532,7 @@ index 0000000000..cf78a661b2
 +#include "base/json/json_writer.h"
 +#include "base/memory/ref_counted_memory.h"
 +#include "base/memory/scoped_refptr.h"
++#include "base/no_destructor.h"
 +#include "base/strings/escape.h"
 +#include "base/strings/string_number_conversions.h"
 +#include "base/strings/string_util.h"
@@ -10966,10 +10967,37 @@ index 0000000000..cf78a661b2
 +       {"__JAH_ADS_BLOCKED__", base::NumberToString(ads_blocked)}});
 +}
 +
++// In-memory snapshot of the last successfully fetched live data. KRITIK for a
++// snappy new tab: without this every NTP open blocked on 5 concurrent Kick/
++// Twitch round-trips (up to the per-loader timeout) before ANY pixel painted.
++// Now the newest snapshot is served instantly and refreshed in the background,
++// so only the very first tab after launch (cold cache) waits on the network.
++// UI-thread only (WebUIDataSource request handling runs on the UI thread), so
++// no locking is required. `slugs` records which follow list produced the
++// snapshot, so an edited follow list forces a fresh fetch instead of showing
++// the wrong channels.
++struct JahLiveCache {
++  bool valid = false;
++  base::Time fetched_at;
++  std::vector<std::string> slugs;
++  JahLiveStatus hero;
++  std::string follows_json;
++};
++
++JahLiveCache& GetLiveCache() {
++  static base::NoDestructor<JahLiveCache> cache;
++  return *cache;
++}
++
++// Snapshot is served instantly; if older than this it is refreshed in the
++// background so the next open stays fresh.
++constexpr base::TimeDelta kLiveCacheFreshFor = base::Seconds(15);
++
 +// Self-owned: fetches the hero channel + the follow list concurrently in the
-+// browser process (no CORS), then serves the page with live data injected.
-+// Deletes itself once every loader has reported (each has a 5s timeout, so a
-+// callback is guaranteed).
++// browser process (no CORS). Always updates GetLiveCache() when done; if a page
++// callback was supplied it also serves the rendered page (otherwise it is a
++// background cache refresh). Deletes itself once every loader has reported (each
++// has a timeout, so a callback is guaranteed).
 +class JahHomeLiveFetcher {
 + public:
 +  static void Start(scoped_refptr<network::SharedURLLoaderFactory> factory,
@@ -11031,7 +11059,10 @@ index 0000000000..cf78a661b2
 +    loaders_[idx] = network::SimpleURLLoader::Create(
 +        std::move(request),
 +        twitch ? TwitchTrafficAnnotation() : KickTrafficAnnotation());
-+    loaders_[idx]->SetTimeoutDuration(base::Seconds(5));
++    // Bounded so a single unreachable channel can't stall a cold new tab for
++    // long (the page waits for the slowest loader). Subsequent opens are served
++    // from the cache regardless.
++    loaders_[idx]->SetTimeoutDuration(base::Seconds(3));
 +    if (twitch) {
 +      loaders_[idx]->AttachStringForUpload(TwitchGqlBody(slug),
 +                                           "application/json");
@@ -11058,8 +11089,28 @@ index 0000000000..cf78a661b2
 +    for (size_t i = 1; i < results_.size(); ++i) {
 +      follows.push_back(results_[i]);
 +    }
-+    std::move(callback_).Run(base::MakeRefCounted<base::RefCountedString>(
-+        RenderJahHomePage(hero, BuildFollowsJson(follows_def_, follows))));
++    std::string follows_json = BuildFollowsJson(follows_def_, follows);
++
++    // Refresh the shared snapshot so the next NTP open is instant. Only cache a
++    // usable fetch (hero parsed OK) — otherwise a transient Cloudflare block
++    // would poison the cache with an "unknown" hero for kLiveCacheFreshFor.
++    if (hero.ok) {
++      JahLiveCache& cache = GetLiveCache();
++      cache.valid = true;
++      cache.fetched_at = base::Time::Now();
++      cache.hero = hero;
++      cache.follows_json = follows_json;
++      cache.slugs.clear();
++      for (const FollowChannel& f : follows_def_) {
++        cache.slugs.push_back(f.slug);
++      }
++    }
++
++    // A background refresh runs with a null callback — nothing to serve.
++    if (callback_) {
++      std::move(callback_).Run(base::MakeRefCounted<base::RefCountedString>(
++          RenderJahHomePage(hero, follows_json)));
++    }
 +    delete this;
 +  }
 +
@@ -11192,7 +11243,34 @@ index 0000000000..cf78a661b2
 +  if (Profile* profile = Profile::FromBrowserContext(browser_context)) {
 +    prefs = profile->GetPrefs();
 +  }
-+  JahHomeLiveFetcher::Start(std::move(factory), ReadFollowChannels(prefs),
++  std::vector<FollowChannel> defs = ReadFollowChannels(prefs);
++
++  // Serve the cached snapshot instantly when it matches the current follow list
++  // — this is what makes the new tab feel instant. The cache is only stale if
++  // the follow list changed (fetch fresh so the right channels show) or if it
++  // aged past kLiveCacheFreshFor (serve it now, refresh in the background).
++  JahLiveCache& cache = GetLiveCache();
++  bool defs_match = cache.valid && cache.slugs.size() == defs.size();
++  for (size_t i = 0; defs_match && i < defs.size(); ++i) {
++    if (cache.slugs[i] != defs[i].slug) {
++      defs_match = false;
++    }
++  }
++
++  if (cache.valid && defs_match) {
++    std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
++        RenderJahHomePage(cache.hero, cache.follows_json)));
++    if (base::Time::Now() - cache.fetched_at > kLiveCacheFreshFor) {
++      // Warm the cache for the next open; null callback = no page to serve.
++      JahHomeLiveFetcher::Start(std::move(factory), std::move(defs),
++                                content::WebUIDataSource::GotDataCallback());
++    }
++    return;
++  }
++
++  // Cold cache (first tab after launch) or the follow list changed: fetch now,
++  // then this same call populates the cache for every subsequent open.
++  JahHomeLiveFetcher::Start(std::move(factory), std::move(defs),
 +                            std::move(callback));
 +}
 +
@@ -19548,10 +19626,10 @@ index 0000000000..155b69ea9a
 +#endif  // CHROME_RENDERER_JAH_JAH_BALTA_THROTTLE_H_
 diff --git a/chrome/renderer/jah/jah_emote_content.inc b/chrome/renderer/jah/jah_emote_content.inc
 new file mode 100644
-index 0000000000..928fa3322f
+index 0000000000..d5f218f2fa
 --- /dev/null
 +++ b/chrome/renderer/jah/jah_emote_content.inc
-@@ -0,0 +1,1571 @@
+@@ -0,0 +1,1705 @@
 +R"JAHEMOTE(
 +// JahBrowser native emote content script — renders 7TV (and later BTTV/FFZ)
 +// emotes inside Kick chat. Kick renders its OWN emotes natively (data-emote-name);
@@ -19601,6 +19679,41 @@ index 0000000000..928fa3322f
 +        zeroWidth: false,
 +      });
 +    }
++  }
++
++  // FrankerFaceZ global set: { sets: { id: { emoticons: [{name, urls:{1,2,4}}] } } }
++  function addFfzList(data) {
++    if (!data || !data.sets) return;
++    var fix = function (u) {
++      return u ? (u.indexOf('//') === 0 ? 'https:' + u : u) : null;
++    };
++    for (var sk in data.sets) {
++      var em = data.sets[sk] && data.sets[sk].emoticons;
++      if (!Array.isArray(em)) continue;
++      for (var i = 0; i < em.length; i++) {
++        var e = em[i];
++        if (!e || !e.name || !e.urls || emotes.has(e.name)) continue;
++        var u1 = fix(e.urls['1'] || e.urls[1]);
++        if (!u1) continue;
++        emotes.set(e.name, {
++          src1: u1, src2: fix(e.urls['2'] || e.urls[2]) || u1, zeroWidth: false,
++        });
++      }
++    }
++  }
++
++  // Recently-used emotes (localStorage, per-origin) for the emote menu's top row.
++  function jahReadRecent() {
++    try {
++      var r = JSON.parse(localStorage.getItem('jah.emote.recent') || '[]');
++      return Array.isArray(r) ? r : [];
++    } catch (e) { return []; }
++  }
++  function jahPushRecent(name) {
++    var r = jahReadRecent().filter(function (x) { return x !== name; });
++    r.unshift(name);
++    if (r.length > 24) { r = r.slice(0, 24); }
++    try { localStorage.setItem('jah.emote.recent', JSON.stringify(r)); } catch (e) {}
 +  }
 +
 +  function currentSlug() {
@@ -19710,7 +19823,7 @@ index 0000000000..928fa3322f
 +  function readChatCfg() {
 +    var d = { keywords: [], sound: true, notify: false, timestamps: false,
 +              sevenTvChannel: true, sevenTvGlobal: true, bttvGlobal: true,
-+              emoteSize: 1.7 };
++              ffz: true, emoteSize: 1.7 };
 +    try {
 +      var raw = localStorage.getItem('jah.chat.cfg');
 +      if (raw) {
@@ -19722,6 +19835,7 @@ index 0000000000..928fa3322f
 +        d.sevenTvChannel = p.sevenTvChannel !== false;
 +        d.sevenTvGlobal = p.sevenTvGlobal !== false;
 +        d.bttvGlobal = p.bttvGlobal !== false;
++        d.ffz = p.ffz !== false;
 +        d.emoteSize = (typeof p.emoteSize === 'number' &&
 +                       p.emoteSize >= 1 && p.emoteSize <= 3) ? p.emoteSize : 1.7;
 +      }
@@ -19784,15 +19898,29 @@ index 0000000000..928fa3322f
 +    if (!chatCfg.keywords.length || !root || root.nodeType !== 1) return;
 +    if (root.__jahHlDone) return;
 +    var text = (root.innerText || '').toLowerCase();
-+    var matched = false;
++    var matched = false, matchedKw = '';
 +    for (var i = 0; i < chatCfg.keywords.length; i++) {
 +      var kw = chatCfg.keywords[i];
-+      if (kw && text.indexOf(kw) !== -1) { matched = true; break; }
++      if (kw && text.indexOf(kw) !== -1) { matched = true; matchedKw = kw; break; }
 +    }
 +    root.__jahHlDone = true;
 +    if (!matched) return;
 +    ensureHighlightCss();
 +    root.classList.add('jah-hl');
++    // Keyword catch log — surfaced in the mod tools "Kelimeler / Keywords" tab.
++    if (!root.__jahKwLogged) {
++      root.__jahKwLogged = true;
++      try {
++        jahKeywordLog.push({
++          time: jahNow(),
++          user: (typeof jahModUser === 'function' ? jahModUser(root) : '') || '—',
++          kw: matchedKw,
++          text: (root.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160)
++        });
++        if (jahKeywordLog.length > 250) { jahKeywordLog.shift(); }
++        if (typeof jahModRefresh === 'function' && jahModRefresh) { jahModRefresh(); }
++      } catch (e) {}
++    }
 +    if (!root.__jahMentioned) {
 +      root.__jahMentioned = true;
 +      if (chatCfg.sound) playBeep();
@@ -19885,6 +20013,7 @@ index 0000000000..928fa3322f
 +    var chan7 = mkChk('7TV — ' + (lang === 'en' ? 'channel' : 'kanal'), chatCfg.sevenTvChannel);
 +    var glob7 = mkChk('7TV — global', chatCfg.sevenTvGlobal);
 +    var globB = mkChk('BTTV — global', chatCfg.bttvGlobal);
++    var globF = mkChk('FFZ — global', chatCfg.ffz);
 +    var sizeWrap = document.createElement('label');
 +    sizeWrap.style.cssText =
 +      'display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:#9BA1A6;';
@@ -19916,10 +20045,12 @@ index 0000000000..928fa3322f
 +      var provChanged =
 +          chatCfg.sevenTvChannel !== chan7.__cb.checked ||
 +          chatCfg.sevenTvGlobal !== glob7.__cb.checked ||
-+          chatCfg.bttvGlobal !== globB.__cb.checked;
++          chatCfg.bttvGlobal !== globB.__cb.checked ||
++          chatCfg.ffz !== globF.__cb.checked;
 +      chatCfg.sevenTvChannel = chan7.__cb.checked;
 +      chatCfg.sevenTvGlobal = glob7.__cb.checked;
 +      chatCfg.bttvGlobal = globB.__cb.checked;
++      chatCfg.ffz = globF.__cb.checked;
 +      chatCfg.emoteSize = parseFloat(sizeSel.value) || 1.7;
 +      saveChatCfg();
 +      // Sağlayıcı değişince emote setini yeniden yükle (açılan gelir, kapanan gider).
@@ -19965,6 +20096,7 @@ index 0000000000..928fa3322f
 +    panel.appendChild(chan7);
 +    panel.appendChild(glob7);
 +    panel.appendChild(globB);
++    panel.appendChild(globF);
 +    panel.appendChild(sizeWrap);
 +    panel.appendChild(save);
 +    if (mount) {
@@ -20185,7 +20317,10 @@ index 0000000000..928fa3322f
 +    // re-scan catches anything the observer missed. Idempotent + cheap
 +    // (~30 visible messages; converted emotes are skipped).
 +    if (window.__jahEmotesTimer) clearInterval(window.__jahEmotesTimer);
-+    window.__jahEmotesTimer = setInterval(scanAll, 1500);
++    // The MutationObserver already catches new/changed messages; this periodic
++    // full re-scan is only a safety net, so a slower cadence is plenty and keeps
++    // the chat page's main thread free.
++    window.__jahEmotesTimer = setInterval(scanAll, 3000);
 +  }
 +
 +  // Monotonic load generation: bumped on every (re)load so in-flight fetches
@@ -20228,6 +20363,12 @@ index 0000000000..928fa3322f
 +        jobs.push(fetch('https://api.betterttv.net/3/cached/emotes/global')
 +          .then(function (r) { return r.json(); })
 +          .then(function (d) { if (gen === loadGen) addBttvList(d); })
++          .catch(function () {}));
++      }
++      if (cfg.ffz !== false) {
++        jobs.push(fetch('https://api.frankerfacez.com/v1/set/global')
++          .then(function (r) { return r.json(); })
++          .then(function (d) { if (gen === loadGen) addFfzList(d); })
 +          .catch(function () {}));
 +      }
 +      return Promise.all(jobs);
@@ -20539,17 +20680,20 @@ index 0000000000..928fa3322f
 +      var np = start + text.length;
 +      try { input.setSelectionRange(np, np); } catch (e) {}
 +    } else {
-+      // Rich contenteditable. If the caret isn't inside the editor (the click
-+      // just moved focus), drop it at the end so the insert lands here.
-+      var sel = window.getSelection();
-+      if (!sel || sel.rangeCount === 0 || !input.contains(sel.anchorNode)) {
-+        try {
-+          var r = document.createRange();
-+          r.selectNodeContents(input);
-+          r.collapse(false);
-+          if (sel) { sel.removeAllRanges(); sel.addRange(r); }
-+        } catch (e) {}
-+      }
++      // Rich contenteditable (Kick = Lexical). KRITIK: ALWAYS collapse the DOM
++      // selection to the END before inserting — do NOT skip this when the caret
++      // already looks "inside". After the first emote, Lexical's own selection
++      // model is left where a fresh synthetic beforeinput can't be mapped, so a
++      // second beforeinput is silently dropped and only ONE emote ever lands.
++      // Re-collapsing to the end every time is exactly what lets the user stack
++      // many emotes in a row.
++      try {
++        var sel = window.getSelection();
++        var r = document.createRange();
++        r.selectNodeContents(input);
++        r.collapse(false);
++        if (sel) { sel.removeAllRanges(); sel.addRange(r); }
++      } catch (e) {}
 +      // KRITIK: Kick's composer is a Lexical editor. From our ISOLATED world
 +      // document.execCommand('insertText') returns true but Lexical reverts the
 +      // mutation, so nothing lands — a synthetic `beforeinput` (which Lexical's
@@ -20626,11 +20770,8 @@ index 0000000000..928fa3322f
 +    function renderGrid(query) {
 +      grid.textContent = '';
 +      var q = (query || '').toLowerCase();
-+      var count = 0;
-+      emotes.forEach(function (meta, name) {
-+        if (count >= 180) return;  // cap for performance
-+        if (q && name.toLowerCase().indexOf(q) === -1) return;
-+        count++;
++      var en = lang === 'en';
++      function makeCell(name, meta) {
 +        var cell = document.createElement('button');
 +        cell.type = 'button';
 +        cell.title = name;
@@ -20648,19 +20789,48 @@ index 0000000000..928fa3322f
 +        cell.addEventListener('mouseleave', function () {
 +          cell.style.background = 'transparent';
 +        });
-+        cell.addEventListener('mousedown', function (e) {
-+          e.preventDefault();
++        var pick = function (e) {
++          if (e) { e.preventDefault(); }
 +          insertIntoInput(findChatInput(), name + ' ');
-+        });
++          jahPushRecent(name);
++        };
++        cell.addEventListener('mousedown', pick);
 +        // Keyboard activation: mousedown alone excludes Enter/Space (which fire
 +        // 'click', not 'mousedown'), so the menu would be mouse-only.
 +        cell.addEventListener('keydown', function (e) {
-+          if (e.key === 'Enter' || e.key === ' ') {
-+            e.preventDefault();
-+            insertIntoInput(findChatInput(), name + ' ');
-+          }
++          if (e.key === 'Enter' || e.key === ' ') { pick(e); }
 +        });
-+        grid.appendChild(cell);
++        return cell;
++      }
++      function secLabel(txt) {
++        var d = document.createElement('div');
++        d.textContent = txt;
++        d.style.cssText = 'grid-column:1/-1;font:700 10px "Segoe UI",system-ui;' +
++          'letter-spacing:.05em;color:#8A94A0;margin:6px 2px 2px;';
++        return d;
++      }
++      // Recently used row (only when not searching).
++      if (!q) {
++        var rec = jahReadRecent();
++        var recCells = [];
++        for (var ri = 0; ri < rec.length && recCells.length < 18; ri++) {
++          var rm = emotes.get(rec[ri]);
++          if (rm) { recCells.push(makeCell(rec[ri], rm)); }
++        }
++        if (recCells.length) {
++          grid.appendChild(secLabel(en ? 'Recently used' : 'Son kullanılan'));
++          recCells.forEach(function (c) { grid.appendChild(c); });
++          grid.appendChild(secLabel(en ? 'All emotes' : 'Tüm emoteler'));
++        }
++      }
++      // Show (nearly) the whole set — lazy-loaded images keep this cheap, so the
++      // old hard 180 cap that hid most channel emotes is gone.
++      var count = 0;
++      emotes.forEach(function (meta, name) {
++        if (count >= 900) return;
++        if (q && name.toLowerCase().indexOf(q) === -1) return;
++        count++;
++        grid.appendChild(makeCell(name, meta));
 +      });
 +    }
 +    // Debounce: renderGrid rebuilds the whole emote grid, so don't run it on
@@ -20829,20 +20999,28 @@ index 0000000000..928fa3322f
 +  // ===================================================================
 +  var jahChatters = Object.create(null);  // user -> {n,last,lastText,msgs:[{t,text}]}
 +  var jahModLog = [];                      // {time,user,type,text}
++  var jahKeywordLog = [];                  // {time,user,kw,text} keyword catches
 +  var JAH_USER_MSGS = 10, JAH_LOG_MAX = 250;
 +  var jahLinkWL =
 +    /(^|\.)(kick\.com|twitch\.tv|youtube\.com|youtu\.be|7tv\.app|betterttv\.net|twitter\.com|x\.com|instagram\.com|streamelements\.com)$/i;
 +
 +  function jahModUser(root) {
-+    var el = root.querySelector('[data-chat-entry-user-id], .chat-entry-username, ' +
-+                                'button[title], a[href^="/"]');
++    // Kick renders the username as a colored clickable element before the ":".
++    var el = root.querySelector(
++        '[data-chat-entry-user], [data-chat-entry-user-id], .chat-entry-username,' +
++        ' .chat-message-identity button, button[title]:not([title=""]),' +
++        ' a[href^="/"]');
 +    var name = el ? (el.getAttribute('title') || el.textContent || '').trim() : '';
-+    if (!name) {
-+      var t = (root.innerText || '').trim();
++    name = name.replace(/^[:\s]+|[:\s]+$/g, '');
++    if (!name || name.length > 40) {
++      // Fallback: text up to the first ':' — but drop a leading "HH:MM"
++      // timestamp first, otherwise we'd grab the hour as the "user".
++      var t = (root.innerText || '').replace(/\s+/g, ' ').trim();
++      t = t.replace(/^\d{1,2}:\d{2}\s*/, '');
 +      var ci = t.indexOf(':');
-+      if (ci > 0 && ci < 28) name = t.slice(0, ci).trim();
++      if (ci > 0 && ci < 30) name = t.slice(0, ci).trim();
 +    }
-+    return name.replace(/[:\s]+$/, '').slice(0, 40);
++    return (name || '').replace(/[:\s]+$/, '').slice(0, 40);
 +  }
 +
 +  function jahSpamFlags(user, text) {
@@ -20980,7 +21158,8 @@ index 0000000000..928fa3322f
 +    }
 +    var tabC = mkTab('chatters', en ? 'Chatters' : 'Sohbetçiler');
 +    var tabL = mkTab('log', en ? 'Flags' : 'Bayraklar');
-+    tabs.appendChild(tabC); tabs.appendChild(tabL);
++    var tabK = mkTab('keywords', en ? 'Keywords' : 'Kelimeler');
++    tabs.appendChild(tabC); tabs.appendChild(tabL); tabs.appendChild(tabK);
 +    // Search
 +    var search = document.createElement('input');
 +    search.type = 'text';
@@ -21030,6 +21209,7 @@ index 0000000000..928fa3322f
 +    function render() {
 +      tabC.style.color = active === 'chatters' ? '#53FC18' : '#8A94A0';
 +      tabL.style.color = active === 'log' ? '#53FC18' : '#8A94A0';
++      tabK.style.color = active === 'keywords' ? '#53FC18' : '#8A94A0';
 +      body.textContent = '';
 +      var q = (search.value || '').toLocaleLowerCase('tr-TR');
 +      if (active.indexOf('card:') === 0) {
@@ -21071,8 +21251,36 @@ index 0000000000..928fa3322f
 +        }
 +        return;
 +      }
++      if (active === 'keywords') {
++        search.style.display = 'none';
++        if (!chatCfg || !chatCfg.keywords || !chatCfg.keywords.length) {
++          var ek = document.createElement('div');
++          ek.textContent = en ? 'Add highlight words in the Chat tab first.'
++                              : 'Önce Sohbet sekmesinden vurgu kelimeleri ekle.';
++          ek.style.cssText = 'padding:16px;text-align:center;color:#59636F;';
++          body.appendChild(ek); return;
++        }
++        if (!jahKeywordLog.length) {
++          var ek2 = document.createElement('div');
++          ek2.textContent = en ? 'No keyword hits yet.' : 'Henüz kelime yakalanmadı.';
++          ek2.style.cssText = 'padding:16px;text-align:center;color:#59636F;';
++          body.appendChild(ek2); return;
++        }
++        for (var kk = jahKeywordLog.length - 1; kk >= 0; kk--) {
++          var kl = jahKeywordLog[kk];
++          body.appendChild(row(kl.user + ' — ' + kl.text,
++              jahAgo(kl.time) + ' • “' + kl.kw + '”',
++              (function (u) { return function () { showCard(u); }; })(kl.user)));
++        }
++        return;
++      }
 +      // chatters
 +      search.style.display = '';
++      var total = Object.keys(jahChatters).length;
++      var hdr = document.createElement('div');
++      hdr.textContent = (en ? 'Active chatters: ' : 'Aktif sohbetçi: ') + total;
++      hdr.style.cssText = 'padding:2px 8px 6px;font-size:11px;color:#8A94A0;';
++      body.appendChild(hdr);
 +      var arr = [];
 +      for (var k in jahChatters) { if (!q || k.toLocaleLowerCase('tr-TR').indexOf(q) >= 0) { arr.push(k); } }
 +      arr.sort(function (a, b) { return jahChatters[b].last - jahChatters[a].last; });
@@ -21082,16 +21290,20 @@ index 0000000000..928fa3322f
 +        e2.style.cssText = 'padding:16px;text-align:center;color:#59636F;';
 +        body.appendChild(e2); return;
 +      }
-+      for (var x = 0; x < Math.min(arr.length, 80); x++) {
++      for (var x = 0; x < Math.min(arr.length, 150); x++) {
 +        var u = arr[x], cc = jahChatters[u];
 +        body.appendChild(row(u, cc.n + (en ? ' msg • ' : ' mesaj • ') + jahAgo(cc.last),
 +            (function (uu) { return function () { showCard(uu); }; })(u)));
 +      }
 +    }
 +    // Re-render only while actually visible (offsetParent is null when the
-+    // panel — or, in the hub, its tab pane — is hidden).
++    // panel — or, in the hub, its tab pane — is hidden), and COALESCE bursts:
++    // a fast chat fires per-message, so re-rendering the whole roster on every
++    // message would churn the DOM many times/sec and make the page feel slow.
++    var modRenderTimer = 0;
 +    jahModRefresh = function () {
-+      if (panel.offsetParent !== null) { render(); }
++      if (panel.offsetParent === null || modRenderTimer) { return; }
++      modRenderTimer = setTimeout(function () { modRenderTimer = 0; render(); }, 400);
 +    };
 +    panel.appendChild(tabs); panel.appendChild(search);
 +    panel.appendChild(body); panel.appendChild(foot);
@@ -21382,10 +21594,10 @@ index 0000000000..0b66449453
 +#endif  // CHROME_RENDERER_JAH_JAH_MEDIA_INJECTOR_H_
 diff --git a/chrome/renderer/jah/jah_volume_content.inc b/chrome/renderer/jah/jah_volume_content.inc
 new file mode 100644
-index 0000000000..0b0d3f46f4
+index 0000000000..3d3fbcd727
 --- /dev/null
 +++ b/chrome/renderer/jah/jah_volume_content.inc
-@@ -0,0 +1,284 @@
+@@ -0,0 +1,294 @@
 +R"JAHVOL(
 +// JahBrowser volume booster + per-tab volume — runs on all pages via a fork
 +// RenderFrameObserver (isolated world). Routes each media element through a
@@ -21512,7 +21724,7 @@ index 0000000000..0b0d3f46f4
 +    gain = Math.max(0, Math.min(MAX, Math.round(g * 100) / 100));
 +    // Engage the WebAudio path the first time the level leaves 100%.
 +    if (gain !== 1.0) engaged = true;
-+    if (engaged) { wireAll(); apply(); }
++    if (engaged) { ensureMediaObserver(); wireAll(); apply(); }
 +    showPill();
 +    // Site-basina hatirla; bir sonraki ziyarette ilk gesture'da geri yuklenir.
 +    try { localStorage.setItem('jah.vol.' + location.hostname, String(gain)); }
@@ -21559,12 +21771,17 @@ index 0000000000..0b0d3f46f4
 +  // querySelectorAll('video, audio') on every mutation causes chat/scroll jank.
 +  // (The capturing 'play' listener above already wires media the instant it
 +  // starts, so this is only a safety net for not-yet-played media.)
++  // Re-scan for new media only while the booster is engaged. KRITIK for speed:
++  // we do NOT attach a whole-document subtree MutationObserver on every page —
++  // that would make the browser track every DOM change site-wide for the whole
++  // session (scroll/animation jank everywhere) even though the callback usually
++  // has nothing to do. The observer is attached lazily the first time the user
++  // actually boosts volume / enables normalization (ensureMediaObserver()).
 +  var wireScheduled = false;
-+  new MutationObserver(function (muts) {
-+    if (!engaged) return;  // nothing to wire until the booster is used
-+    // Only re-scan when a media element was actually added — otherwise Kick's
-+    // constant chat mutations would run a full-document querySelectorAll every
-+    // frame for the whole session.
++  var mediaObserverOn = false;
++  var mediaObserver = new MutationObserver(function (muts) {
++    // Only re-scan when a media element was actually added — otherwise a busy
++    // page's constant mutations would run a full-document querySelectorAll.
 +    var mediaAdded = false;
 +    for (var i = 0; i < muts.length && !mediaAdded; i++) {
 +      var added = muts[i].addedNodes;
@@ -21580,7 +21797,12 @@ index 0000000000..0b0d3f46f4
 +    if (!mediaAdded || wireScheduled) return;
 +    wireScheduled = true;
 +    requestAnimationFrame(function () { wireScheduled = false; wireAll(); });
-+  }).observe(document.documentElement, { childList: true, subtree: true });
++  });
++  function ensureMediaObserver() {
++    if (mediaObserverOn) return;
++    mediaObserverOn = true;
++    mediaObserver.observe(document.documentElement, { childList: true, subtree: true });
++  }
 +
 +  // Expose current level for the browser/UI if needed.
 +  window.__jahGetVolume = function () { return gain; };
@@ -21589,7 +21811,7 @@ index 0000000000..0b0d3f46f4
 +  window.__jahSetNormalize = function (on) {
 +    normalizeOn = !!on;
 +    // Normalization needs the WebAudio path engaged even at 100% volume.
-+    if (normalizeOn) { engaged = true; if (ensureContext()) { wireAll(); } }
++    if (normalizeOn) { engaged = true; ensureMediaObserver(); if (ensureContext()) { wireAll(); } }
 +    applyRouting();
 +    apply();
 +  };
@@ -33801,22 +34023,23 @@ index 6647c19d87..b48858ea03 100644
  
  using CannotFreezeReasonSet = base::EnumSet<CannotFreezeReason,
 diff --git a/components/performance_manager/user_tuning/prefs.cc b/components/performance_manager/user_tuning/prefs.cc
-index 40915dcac0..21bf8100da 100644
+index 40915dcac0..9518e2b8b0 100644
 --- a/components/performance_manager/user_tuning/prefs.cc
 +++ b/components/performance_manager/user_tuning/prefs.cc
-@@ -31,8 +31,11 @@ void RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
+@@ -31,6 +31,13 @@ void RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
    registry->RegisterIntegerPref(
        kMemorySaverModeTimeBeforeDiscardInMinutes,
        kDefaultMemorySaverModeTimeBeforeDiscardInMinutes);
 +  // JahBrowser local patch: Memory Saver ON by default so background tabs
-+  // reclaim memory (lower RAM). Live stream tabs are never discarded — see
-+  // discard_eligibility_policy.cc CannotDiscardReason::kJahStreamSite.
++  // JahBrowser: Memory Saver default is OFF for snappier tab switching — on a
++  // machine with plenty of RAM, discarding idle background tabs only makes
++  // returning to them reload (feels slow) for no real benefit. Users who want
++  // it (long multi-hour sessions / low-RAM) enable it via "Long Stream Mode"
++  // in the Control Center. Live stream tabs are never discarded either way —
++  // see discard_eligibility_policy.cc CannotDiscardReason::kJahStreamSite.
    registry->RegisterIntegerPref(
--      kMemorySaverModeState, static_cast<int>(MemorySaverModeState::kDisabled));
-+      kMemorySaverModeState, static_cast<int>(MemorySaverModeState::kEnabled));
+       kMemorySaverModeState, static_cast<int>(MemorySaverModeState::kDisabled));
    registry->RegisterIntegerPref(
-       kMemorySaverModeAggressiveness,
-       static_cast<int>(MemorySaverModeAggressiveness::kMedium));
 diff --git a/components/search_engines/template_url_prepopulate_data.cc b/components/search_engines/template_url_prepopulate_data.cc
 index 23c3c13f2f..da72b1286d 100644
 --- a/components/search_engines/template_url_prepopulate_data.cc
