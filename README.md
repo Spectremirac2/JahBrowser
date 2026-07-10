@@ -2,140 +2,144 @@
 
 # JahBrowser
 
-**Kick ve Twitch izleyicileri için doğuştan optimize, çökmeyen Chromium tarayıcısı.**
-*A crash‑resistant, Chromium‑based browser built for Kick & Twitch viewers and streamers.*
+**A crash‑resistant, Chromium‑based Windows browser built for Kick viewers and streamers.**
 
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0A0E13.svg)]()
 [![Chromium](https://img.shields.io/badge/based%20on-Chromium%20152-2ecc71.svg)]()
 
-[**⬇️ İndir / Download**](../../releases/latest) · [**Neden çökmüyor?**](#-neden-çökmüyor--why-doesnt-it-crash) · [**Özellikler**](#-özellikler--features) · [**Kaynaktan derle**](#-kaynaktan-derleme--build-from-source) · [**Güvenlik**](SECURITY.md)
+[**⬇️ Download**](../../releases/latest) · [**Why doesn't it crash?**](#-why-doesnt-it-crash) · [**Features**](#-features) · [**Build**](#-build-from-source) · [**Security**](SECURITY.md)
+
+**English** · [**Türkçe**](README.tr.md)
+
+<img src="docs/screenshots/01-new-tab.png" alt="JahBrowser new tab" width="90%">
 
 </div>
 
 ---
 
-## Nedir? / What is it?
+## What is it?
 
-JahBrowser, **Kick** (birincil) ve **Twitch** izleyicileri ile yayıncıları için tasarlanmış, Chromium 152 tabanlı açık kaynak bir Windows tarayıcısıdır. Chrome kadar tanıdık; ama canlı yayın izlemek için doğuştan optimize:
+JahBrowser is an open‑source, Chromium‑152‑based Windows browser designed for **Kick** viewers and streamers. Familiar like Chrome, but built for watching live streams — and engineered so **a crash never interrupts your stream.**
 
-- **Çökmez** — bir sekme çökse bile yayınınız kesilmez (aşağıda anlatılıyor).
-- **Eklentisiz emote motoru** — 7TV / BTTV / FFZ / Kick emote'ları chat'te doğrudan render.
-- **Motor seviyesinde reklam engelleme (Balta)** — ~93.000 reklam/tracker domaini + YouTube ad‑skip + kozmetik filtre.
-- **Birleşik canlı yan panel** — takip ettiğin Kick/Twitch kanalları tek yerde, gerçek canlı veriyle.
-- **Site‑başına ses booster** (%0–500) + loudness dengeleme, çoklu yayın, yayıncı modu, native Kick mod araçları.
+- **Crash‑resistant** — even if a tab crashes, your stream keeps going (explained below).
+- **No‑plugin emote engine** — 7TV / BTTV / FFZ / Kick emotes render directly in chat.
+- **Engine‑level ad blocking (Balta)** — ~93,000 ad/tracker domains + YouTube ad‑skip + cosmetic filtering.
+- **Live side panel** — the Kick channels you follow in one place, with real live data.
+- **Per‑site volume booster** (0–500%) + loudness normalization, multistream, streamer mode, native Kick mod tools.
 
-> JahBrowser is an open‑source, Chromium‑152‑based Windows browser for **Kick** (primary) and Twitch viewers/streamers. Familiar like Chrome, but built for watching live streams — and engineered so a crash never interrupts your stream.
-
----
-
-## 🛡️ Neden çökmüyor? / Why doesn't it crash?
-
-Bu, JahBrowser'ın en önemli farkı. Kısa cevap: **Chromium'un kaya gibi çok‑işlemli çekirdeğini aynen kullanıyoruz, üstüne bir "kurtarma + koruma" katmanı ekliyoruz** — böylece bir çökme yayınınızı hiç kesmez.
-
-Chrome de aslında sağlamdır; ama bir sekmenin işlemi çöktüğünde sana **"Hay aksi! / Aw, Snap!"** hata sayfasını gösterir ve **elle yenilemeni** bekler. Arka plandaki yayın sekmesini de bellek baskısı altında **uykuya alır/boşaltır**, geri döndüğünde baştan yükler. JahBrowser bu iki davranışı da değiştirir. İşte tam olarak nasıl:
-
-### 1. Otomatik çökme kurtarma (invisible auto‑recovery)
-Bir sekmenin render işlemi gerçekten çökerse, JahBrowser hata sayfasını göstermek yerine sekmeyi **taze bir işlemde otomatik yeniden yükler** — çoğu zaman sen fark etmeden sayfa geri gelir.
-
-- **Yayın sekmeleri (kick.com / twitch.tv) en hızlı kurtulur (~50 ms);** diğer sekmeler ~400 ms.
-- **Sadece gerçek çökmeler** kurtarılır (işlem çökmesi, OOM/bellek yetersizliği, bütünlük hatası). Kullanıcının kapattığı ya da bellek tasarrufu için boşaltılan sekmeler yanlışlıkla yeniden yüklenmez.
-- **Sonsuz döngü koruması:** bir sayfa gerçekten bozuksa (üst üste çökerse), kurtarma kademeli yavaşlar (1 sn → 3 sn → 10 sn) ve bir eşikten sonra durur; o zaman normal hata sayfası gösterilir. Böylece bozuk bir site tarayıcıyı kilitlemez.
-- **Form güvenliği:** POST (form gönderimi) sonrası sayfalar otomatik yenilenmez — verini sessizce ikinci kez göndermeyiz.
-
-*(Kod: [`chrome/browser/jah/jah_crash_recovery_tab_helper.cc`](chromium-patches/faz1/jah-browser-faz1.patch) — `WebContentsObserver::PrimaryMainFrameRenderProcessGone` üstüne kurulu.)*
-
-### 2. Yayın sekmesi asla uyutulmaz (stream‑tab keep‑alive)
-Chrome dahil çoğu tarayıcı, RAM kazanmak için arka plandaki sekmeleri **dondurur/boşaltır** — bu, yayını arka planda dinlerken sesin kesilmesine ya da sekmeye dönünce yeniden yüklenmesine yol açar.
-
-JahBrowser'da **kick.com ve twitch.tv sekmeleri hiçbir zaman boşaltılmaz/dondurulmaz** (Chromium'un discard/freeze motoruna `kJahStreamSite` gerekçesi eklendi). Bellek Tasarrufu (Memory Saver) varsayılan **açık** — ama yalnızca yayın‑dışı sekmelere uygulanır. Sonuç: kaç sekme açarsan aç, yayın arka planda kesintisiz devam eder.
-
-### 3. Video kararmaz (GPU/yazılım çözücü merdiveni)
-Donanım (GPU) video çözücüsü bir sürücü hatasıyla düşerse, video **kararmak yerine yazılım çözücüye inip oynamaya devam eder** (`proprietary_codecs` + `ffmpeg_branding="Chrome"` birlikte derlenir). GPU işlemi çökerse Chromium'un yerleşik güvenlik merdiveni devreye girer — **tüm tarayıcı değil, sadece GPU katmanı** daha güvenli moda iner. Bu merdiveni bozan riskli bayraklar (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog` vb.) hiçbir zaman gönderilmez.
-
-### 4. Kendi hatalarımızı da temizledik
-Geliştirme sırasında reklam‑engelleyici katmanımızın (Balta) belirli sayfalarda render işlemini öldüren bir hatası vardı; kök nedeni bulunup düzeltildi. "Her şey çöküyor" şikayetinin asıl kaynağı buydu ve artık yok.
-
-**Özet:** Aynı Chromium sağlamlığı + görünmez otomatik kurtarma + yayın sekmesi koruması + korunmuş GPU merdiveni = izleyici için **kesintisiz yayın**.
-
-> **In short (EN):** JahBrowser keeps Chromium's rock‑solid multi‑process core and adds a recovery + protection layer. A crashed tab is silently reloaded in a fresh process (~50 ms for stream tabs), stream tabs (kick/twitch) are **never** discarded or frozen, video falls back to software decoding instead of going black, and the GPU crash‑recovery ladder is left intact. Only genuine crashes trigger recovery; repeated crashes back off and eventually show the error page (so a truly broken page can't loop forever); POST pages are never silently resubmitted. The net effect for a viewer: **your stream is never interrupted.**
+<div align="center">
+<img src="docs/screenshots/02-control-center.png" alt="Control Center" width="49%">
+<img src="docs/screenshots/03-multistream.png" alt="Multistream" width="49%">
+</div>
 
 ---
 
-## ✨ Özellikler / Features
+## 🛡️ Why doesn't it crash?
 
-| Alan | Özellik |
+This is JahBrowser's single most important difference. The short answer: **it keeps Chromium's rock‑solid multi‑process core and adds a recovery + protection layer** — so a crash never interrupts your stream.
+
+Chrome is robust too, but when a tab's process crashes it shows you the **"Aw, Snap!"** error page and waits for you to **reload manually**. It also **discards/freezes** background tabs under memory pressure, reloading them from scratch when you return. JahBrowser changes both behaviors. Here is exactly how:
+
+### 1. Invisible automatic crash recovery
+If a tab's renderer process actually crashes, JahBrowser **reloads it automatically in a fresh process** instead of showing an error page — usually the page comes back before you even notice.
+
+- **Stream tabs (kick.com) recover fastest (~50 ms);** other tabs ~400 ms.
+- **Only genuine crashes** are recovered (process crash, out‑of‑memory, integrity failure). Tabs you closed, or ones the browser evicted to save memory, are never reloaded by mistake.
+- **Infinite‑loop protection:** if a page is genuinely broken (keeps crashing), recovery backs off progressively (1 s → 3 s → 10 s) and stops after a threshold, then shows the normal error page — so a broken site can't lock up the browser.
+- **Form safety:** pages loaded via POST are never auto‑reloaded — we never silently resubmit your data.
+
+*(Code: `chrome/browser/jah/jah_crash_recovery_tab_helper.cc` — built on `WebContentsObserver::PrimaryMainFrameRenderProcessGone`, shipped in [`chromium-patches/`](chromium-patches/).)*
+
+### 2. Stream tabs are never put to sleep
+Most browsers (Chrome included) **freeze/discard** background tabs to reclaim RAM — which is why a stream can go silent while you're on another tab, or reload when you come back.
+
+In JahBrowser, **kick.com tabs are never discarded or frozen** (a `kJahStreamSite` reason was added to Chromium's discard/freeze engine). Memory Saver is on by default — but it only applies to non‑stream tabs. The result: no matter how many tabs you open, your stream keeps playing in the background.
+
+### 3. Video never goes black
+If the hardware (GPU) video decoder fails on a driver bug, video **falls back to software decoding and keeps playing** instead of going black (`proprietary_codecs` + `ffmpeg_branding="Chrome"` are compiled together). If the GPU process crashes, Chromium's built‑in safety ladder kicks in — only the **GPU layer**, not the whole browser, drops to a safer mode. The risky flags that would break this ladder (`--ignore-gpu-blocklist`, `--disable-gpu-watchdog`, etc.) are never shipped.
+
+### 4. We fixed our own crashes too
+During development our ad‑blocking layer (Balta) had a bug that killed the renderer process on certain pages; the root cause was found and fixed. That was the real source of the "everything crashes" reports — and it's gone.
+
+**In short:** same Chromium stability + invisible auto‑recovery + stream‑tab protection + intact GPU ladder = **an uninterrupted stream** for the viewer.
+
+---
+
+## ✨ Features
+
+| Area | Feature |
 |---|---|
-| **Stabilite** | Otomatik çökme kurtarma · yayın sekmesi keep‑alive · video yazılım‑fallback · oturum geri‑yükleme |
-| **Yayın** | Birleşik Kick+Twitch canlı yan panel (gerçek veri + avatarlar) · çoklu yayın grid'i · go‑live masaüstü bildirimi · Tiyatro (tam ekran) modu |
-| **Chat / Emote** | Eklentisiz 7TV/BTTV/FFZ/Kick emote render · emote picker + menü · keyword highlight + mention sesi · mesaj geçmişi |
-| **Kick Mod araçları** | Native mod paneli (sohbetçi kadrosu + user‑card · link/spam/flood/CAPS bayrakları · silme tespiti) — %100 client‑side |
-| **Reklam / Gizlilik** | Balta adblock (~93k domain + kozmetik + YouTube ad‑skip) · DoH açık · telemetri opt‑in (KVKK) |
-| **Ses** | Site‑başına ses booster %0–500 · loudness/normalize · ses mikseri popup'ı |
-| **Kişiselleştirme** | Özel yeni sekme (canlı Kick verisi) · düzenlenebilir takip listesi · koyu mod · arama kısayolları · iki dilli (TR/EN) |
+| **Stability** | Automatic crash recovery · stream‑tab keep‑alive · software video fallback · session restore |
+| **Streaming** | Live side panel (real Kick data + avatars) · multistream grid · go‑live desktop notification · Theater (fullscreen) mode |
+| **Chat / Emotes** | No‑plugin 7TV/BTTV/FFZ/Kick emote rendering · emote picker + menu · keyword highlight + mention sound · message history |
+| **Kick mod tools** | Native mod panel (chatter roster + user‑card · link/spam/flood/CAPS flags · deletion detection) — 100% client‑side |
+| **Ads / Privacy** | Balta adblock (~93k domains + cosmetic + YouTube ad‑skip) · DoH on · opt‑in telemetry |
+| **Sound** | Per‑site volume booster 0–500% · loudness/normalize · volume mixer popup |
+| **Personalization** | Custom new tab (live Kick data) · editable follow list · dark mode · search shortcuts · bilingual (EN/TR) |
 
-Ayrıntılı kullanım kılavuzları: [`docs/kullanim/`](docs/kullanim/)
-
----
-
-## ⬇️ İndirme ve doğrulama / Download & verify
-
-1. [**Releases**](../../releases/latest) sayfasından `JahBrowser-Setup.exe` (kurulum) veya `JahBrowser-Portable.zip` (taşınabilir) indir.
-2. **Varsayılan dil İngilizce** açılır; Kontrol Merkezi'nden Türkçe'ye geçebilirsin.
-
-### "Windows bilgisayarınızı korudu" uyarısı görürsen
-JahBrowser **açık kaynak** ve şu an **kod imzası olmayan** bağımsız bir yapımdır. Windows SmartScreen, henüz "itibar" kazanmamış her yeni imzasız programa bu uyarıyı gösterir — bu **virüs olduğu anlamına gelmez.** Devam etmek için: **"Ek bilgi" → "Yine de çalıştır"**.
-
-Güvenmek zorunda değilsin — **doğrula:**
-- Her sürümde yayınlanan **`SHA256SUMS.txt`** ile indirdiğin dosyanın bütünlüğünü kontrol edebilirsin (PowerShell: `Get-FileHash .\JahBrowser-Setup.exe`).
-- Her sürüm **VirusTotal** taramasına gönderilir; sonuç linki Releases açıklamasında yer alır.
-- Tüm kaynak kod bu depoda — istersen [kendin derleyip](#-kaynaktan-derleme--build-from-source) çalıştırırsın.
-
-Ayrıntı: [SECURITY.md](SECURITY.md)
+Detailed usage guides live in [`docs/kullanim/`](docs/kullanim/).
 
 ---
 
-## 🔧 Kaynaktan derleme / Build from source
+## ⬇️ Download & verify
 
-JahBrowser, Chromium'un tamamını yeniden dağıtmaz. Bunun yerine [ungoogled‑chromium](https://github.com/ungoogled-software/ungoogled-chromium) modelini izler: **temiz bir Chromium ağacının üstüne uygulanan yamalardır.**
+1. From the [**Releases**](../../releases/latest) page, download `JahBrowser-Setup.exe` (installer) or `JahBrowser-Portable.zip` (portable — extract and run `JahBrowser.bat`).
+2. The browser **starts in English by default**; you can switch to Turkish from the Control Center.
+
+### If you see "Windows protected your PC"
+JahBrowser is **open source** and currently an **unsigned** independent build. Windows SmartScreen shows this warning for **any** new, unsigned program that hasn't yet built up "reputation" — it does **not** mean the file is a virus. To continue: **"More info" → "Run anyway"**.
+
+You don't have to take our word for it — **verify:**
+- Each release publishes **`SHA256SUMS.txt`** so you can check your download's integrity (PowerShell: `Get-FileHash .\JahBrowser-Setup.exe`).
+- Each release links a **VirusTotal** scan in the release notes (by file hash).
+- All source is in this repo — you can [build it yourself](#-build-from-source).
+
+Details: [SECURITY.md](SECURITY.md)
+
+---
+
+## 🔧 Build from source
+
+JahBrowser does not redistribute all of Chromium. Instead it follows the [ungoogled‑chromium](https://github.com/ungoogled-software/ungoogled-chromium) model: **patches applied on top of a clean Chromium tree.**
 
 ```
 chromium-patches/
   faz1/
-    jah-browser-faz1.patch          # ~94 dosyalık ana değişiklik seti
-    search-engines-submodule.patch  # arama motoru verisi (ayrı submodule)
-    jah-release-args.gn             # dağıtım build args şablonu
-    tree-files/                     # patch'e giren yeni tam dosyalar
+    jah-browser-faz1.patch          # main change set (~94 files)
+    search-engines-submodule.patch  # search-engine data (separate submodule)
+    jah-release-args.gn             # distribution build args template
+    tree-files/                     # complete new files that the patch adds
 ```
 
-Özet adımlar (ayrıntı için `chromium-patches/README.md`):
+Summary (see `chromium-patches/README.md` for detail):
 
-1. Chromium 152 kaynak ağacını checkout et (base commit `47280b64e3`), `depot_tools` kur.
-2. Yamaları uygula: `git apply chromium-patches/faz1/jah-browser-faz1.patch`
-3. `jah-release-args.gn` şablonundan `out/Release/args.gn` oluştur. **Kritik:** dağıtım build'i için `proprietary_codecs=true` **ve** `ffmpeg_branding="Chrome"` birlikte olmalı (video stabilitesi için).
+1. Check out a Chromium 152 source tree (base commit `47280b64e3`), install `depot_tools`.
+2. Apply the patches: `git apply chromium-patches/faz1/jah-browser-faz1.patch`
+3. Create `out/Release/args.gn` from the `jah-release-args.gn` template. **Critical:** for a distribution build, `proprietary_codecs=true` **and** `ffmpeg_branding="Chrome"` must be set together (for video stability).
 4. `gn gen out/Release && autoninja -C out/Release chrome mini_installer`
 
-`jah-core/` (motor‑bağımsız ürün mantığı, TypeScript) bağımsız test edilebilir: `cd jah-core && npm install && npm test`.
+`jah-core/` (engine‑independent product logic, TypeScript) can be tested standalone: `cd jah-core && npm install && npm test`.
 
 ---
 
-## 🔒 Gizlilik / Privacy
+## 🔒 Privacy
 
-- **Telemetri varsayılan KAPALI** (opt‑in) — KVKK uyumlu.
-- **DoH (DNS‑over‑HTTPS) açık.**
-- Yayıncı gizlilik modu: ekran paylaşımında ne sızabileceği gözetilerek tasarlandı.
-- Google hesabı senkronizasyonu gibi bazı Google servisleri, açık kaynak yapımlarda API anahtarı olmadan çalışmayabilir (Chromium'un bilinen davranışı).
+- **Telemetry is off by default** (opt‑in).
+- **DoH (DNS‑over‑HTTPS) is on.**
+- Streamer privacy mode: designed with "what would leak if this screen were on stream?" in mind.
+- Some Google services (like account sync) may not work in open‑source builds without an API key — a known Chromium behavior.
 
 ---
 
-## 📄 Lisans ve marka / License & branding
+## 📄 License & branding
 
-- Kod: **BSD 3‑Clause** — bkz. [LICENSE](LICENSE). Chromium ve türev bileşenler kendi lisansları altındadır.
-- Bu proje **bağımsız bir topluluk projesidir**; Google, Kick, Twitch, 7TV, BTTV veya FrankerFaceZ ile resmi bir bağı yoktur. Tüm ilgili marka ve logolar sahiplerine aittir.
-- "Chrome" adı/logosu **kullanılmaz** (Google ticari markası).
+- Code: **BSD 3‑Clause** — see [LICENSE](LICENSE). Chromium and derived components remain under their own licenses.
+- This is an **independent community project**, not affiliated with or endorsed by Google, Kick, 7TV, BetterTTV, or FrankerFaceZ. All trademarks belong to their respective owners.
+- The "Chrome" name/logo is **not used** (Google trademark).
 
 ---
 
 <div align="center">
-<sub>Kick + Twitch topluluğu için ❤️ ile · Made for the Kick + Twitch community</sub>
+<sub>Made for the Kick community ❤️ · <a href="README.tr.md">Türkçe README</a></sub>
 </div>
