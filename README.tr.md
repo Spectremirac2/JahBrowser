@@ -92,7 +92,7 @@ JahBrowser **açık kaynak** ve şu an **imzasız** bağımsız bir yapımdır. 
 
 Güvenmek zorunda değilsin — **doğrula:**
 - Her sürümde yayınlanan **`SHA256SUMS.txt`** ile indirdiğin dosyanın bütünlüğünü kontrol edebilirsin (PowerShell: `Get-FileHash .\JahBrowser-Setup.exe`).
-- Her sürüm, açıklamasında **VirusTotal** tarama linki (dosya hash'i ile) verir.
+- **VirusTotal taraması (temiz):** [canlı raporu gör ✅](https://www.virustotal.com/gui/url/29779ddaf5f1ef2a94b43d75a85e59a14bfde9501588b15b2670528b33ecdde7/gti-summary) — her sürüm ayrıca dosya hash'iyle taranır (linkler release notunda).
 - Tüm kaynak kod bu depoda — istersen [kendin derleyip](#-kaynaktan-derleme) çalıştırırsın.
 
 Ayrıntı: [SECURITY.md](SECURITY.md)

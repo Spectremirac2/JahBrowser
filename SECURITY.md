@@ -26,6 +26,8 @@ Get-FileHash .\JahBrowser-Setup.exe -Algorithm SHA256
 Çıkan değer `SHA256SUMS.txt` içindekiyle **birebir aynı** olmalı. Farklıysa dosya bozulmuş veya değiştirilmiş demektir — kullanma, yeniden indir.
 
 ### 2. VirusTotal taraması
+**Canlı tarama sonucu (temiz):** https://www.virustotal.com/gui/url/29779ddaf5f1ef2a94b43d75a85e59a14bfde9501588b15b2670528b33ecdde7/gti-summary
+
 Her sürüm, çok sayıda antivirüs motoruyla tarayan [VirusTotal](https://www.virustotal.com/)'a gönderilir ve sonuç linki ilgili Release açıklamasında paylaşılır. Kendi dosyanı da yükleyip tarayabilirsin.
 
 Chromium/Electron tabanlı yapımların bazı antivirüsler tarafından **yanlışlıkla (false positive)** işaretlenebildiğini unutma — bu, Chromium tabanlı birçok meşru tarayıcının başına gelmiştir. Böyle bir durumda ilgili antivirüs sağlayıcısına "false positive" bildirimi yapılabilir.

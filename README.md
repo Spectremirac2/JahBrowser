@@ -92,7 +92,7 @@ JahBrowser is **open source** and currently an **unsigned** independent build. W
 
 You don't have to take our word for it — **verify:**
 - Each release publishes **`SHA256SUMS.txt`** so you can check your download's integrity (PowerShell: `Get-FileHash .\JahBrowser-Setup.exe`).
-- Each release links a **VirusTotal** scan in the release notes (by file hash).
+- **VirusTotal scan (clean):** [view the live report ✅](https://www.virustotal.com/gui/url/29779ddaf5f1ef2a94b43d75a85e59a14bfde9501588b15b2670528b33ecdde7/gti-summary) — each release is also scanned by file hash (links in the release notes).
 - All source is in this repo — you can [build it yourself](#-build-from-source).
 
 Details: [SECURITY.md](SECURITY.md)
